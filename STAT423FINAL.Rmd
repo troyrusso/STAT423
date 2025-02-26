@@ -1,5 +1,5 @@
 ---
-title: "AI Salary Modeling Project"
+title: "Modern Salary Modeling Project"
 author: "Justin Mai, Tro Russo, Isaac Muhlestein, Conan Li, Jian Kang"
 date: "2025-02-26"
 output: html_document
@@ -9,7 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r inclue=FALSE}
+```{r include=FALSE}
 library(tidyverse)
 ```
 
@@ -18,4 +18,39 @@ library(tidyverse)
 job_market <- read.csv("ai_job_market_insights.csv")
 cost_living <- read.csv("costofliving.csv")
 ```
+
+# Data Exploration
+
+Our goal with this Modern Salary Modeling Project is to analyze modern-day jobs (most are related to AI) to attempt to make salary predictions, looking at the influence of different variables on job salaries.
+
+To do this, we are using the AI-Powered Job Market Insights dataset. this dataset contains information about modern-day jobs regarding AI. The data consists of 500 job listings (observations) with different factors to describe each job. The data isn’t from real-world jobs but it mimics jobs and roles seen in the job market. The general goal of using this dataset is to identify the categories most influential in determining job salaries.
+
+*https://www.kaggle.com/datasets/uom190346a/ai-powered-job-market-insights*
+
+Response Variable: Salary_USD (Numerical): The annual salary offered for the job in USD
+
+Input Variable (Predictors): Job_Title (Categorical), Industry (Categorical), Company_Size (Categorical), Required_Skills (Categorical), Automation_Risk (Categorical), Location (Categorical)
+
+Cost of Living could also be a good indicator to a person's salary. Using an external data source, *Cost of Living Index*, we also want to see how salary is influenced by the cost of living at each correlating city. The data we are using looks at the cost of living indexes by city in 2022, where all the variables involved are numerical.
+
+*https://www.kaggle.com/datasets/kkhandekar/cost-of-living-index-by-city-2022*
+
+# Data Manipulation
+
+```{r warning=FALSE}
+# Joining Modern Job Market and Cost of Living Data
+
+# Splitting `City` Variable into `City` and `State/Country`
+
+cost_living <- cost_living %>% 
+  separate(City, into = c("City", "State/Country"), sep = ",")
+
+cities <- c(unique(job_market$Location))
+
+cost_living <- cost_living %>% 
+  filter(City %in% cities )
+```
+
+
+
 
