@@ -11,10 +11,11 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r include=FALSE}
 library(tidyverse)
+library(dplyr)
+library(ggplot2)
 ```
 
 ```{r}
-<<<<<<< HEAD
 x = 3+2
 y = 5+6
 x+y
@@ -22,9 +23,12 @@ x+y
 
 new comment to test
 =======
+``` {r}
 # Loading csv files
 job_market <- read.csv("ai_job_market_insights.csv")
 cost_living <- read.csv("costofliving.csv")
+job_market
+cost_living
 ```
 
 # Data Exploration
@@ -45,7 +49,7 @@ Cost of Living could also be a good indicator to a person's salary. Using an ext
 
 # Data Manipulation
 
-```{r warning=FALSE}
+```{r, warning=FALSE}
 # Joining Modern Job Market and Cost of Living Data
 
 # Splitting `City` Variable into `City` and `State/Country`
@@ -57,9 +61,16 @@ cities <- c(unique(job_market$Location))
 
 cost_living <- cost_living %>% 
   filter(City %in% cities )
+
+#filters cost of living to only have the city and the cost of living column
+cost_living_subset <- cost_living %>% 
+  select(City, Cost.of.Living.Index)
+
+# we join the two datasets on their city column, which just adds the cost of living index to the job_market
+job_market <- left_join(job_market, cost_living_subset, by = c("Location" = "City"))
+job_market
 ```
 
 
 
 
->>>>>>> bbecdfab7beba0174786491fec37e63e164cfb5c
