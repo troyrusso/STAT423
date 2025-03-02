@@ -2,7 +2,9 @@
 title: "Modern Salary Modeling Project"
 author: "Justin Mai, Tro Russo, Isaac Muhlestein, Conan Li, Jian Kang"
 date: "2025-02-26"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -13,44 +15,106 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 ```
 
-```{r}
+```{r include=FALSE}
 # Loading csv files
 job_market <- read.csv("ai_job_market_insights.csv")
 cost_living <- read.csv("costofliving.csv")
 ```
 
-# Data Exploration
+# Project Overview: Modern Salary Modeling
 
-Our goal with this Modern Salary Modeling Project is to analyze modern-day jobs (most are related to AI) to attempt to make salary predictions, looking at the influence of different variables on job salaries.
+**Description:** Our goal with this Modern Salary Modeling Project is to analyze modern-day jobs (most are related to AI) to attempt to make salary predictions, looking at the influence of different variables on job salaries. This notebook will use the F-statistic and a series of ANOVA tests (hypothesis and confidence intervals)to determine the best predictors for the job market of the future.
 
 To do this, we are using the AI-Powered Job Market Insights dataset. this dataset contains information about modern-day jobs regarding AI. The data consists of 500 job listings (observations) with different factors to describe each job. The data isn’t from real-world jobs but it mimics jobs and roles seen in the job market. The general goal of using this dataset is to identify the categories most influential in determining job salaries.
 
+## Table of Contents
+  
+- [Data Overview](#data-overview)
+- [Data Manipulation](#data-manipulation)
+- [Methodology](#methodology)
+- [Research Questions](#research-questions)
+- [Results](#results)  
+- [Conclusion](#conclusion)  
+
+## Data Overview
+
 *https://www.kaggle.com/datasets/uom190346a/ai-powered-job-market-insights*
 
-Response Variable: Salary_USD (Numerical): The annual salary offered for the job in USD
+\textbf{Response Variable:}
+\begin{itemize}
+    \item \texttt{Salary\_USD} (Numerical): The annual salary offered for the job in USD.
+\end{itemize}
 
-Input Variable (Predictors): Job_Title (Categorical), Industry (Categorical), Company_Size (Categorical), Required_Skills (Categorical), Automation_Risk (Categorical), Location (Categorical)
+\textbf{Predictor Variables:}
+\begin{itemize}
+    \item \texttt{Job\_Title} (Categorical): Job position or role.
+    \item \texttt{Industry} (Categorical): Field of employment.
+    \item \texttt{Company\_Size} (Categorical): Size of the company (small, medium, large).
+    \item \texttt{Required\_Skills} (Categorical): Qualifications for the role.
+    \item \texttt{Automation\_Risk} (Categorical): Risk of automation in the future (low, medium, high).
+    \item \texttt{Location} (Categorical): City where the role is located.
+    \item \texttt{Remote\_Friendly} (Binary): Indicates whether the role supports remote work.
+    \item \texttt{Job\_Growth\_Projection} (Categorical): Expected growth or decline of the role.
+\end{itemize}
+
 
 Cost of Living could also be a good indicator to a person's salary. Using an external data source, *Cost of Living Index*, we also want to see how salary is influenced by the cost of living at each correlating city. The data we are using looks at the cost of living indexes by city in 2022, where all the variables involved are numerical.
 
 *https://www.kaggle.com/datasets/kkhandekar/cost-of-living-index-by-city-2022*
 
-# Data Manipulation
+## Data Manipulation
+
+Before developing our models, we first joined our `Job_Market` dataset with our `Cost_Living` dataset to gather all of the necessary variables in one dataset. Having all of our predictors in one dataset allows us to conduct `lm` models to compare variables across multiple sources of data. This will help us determine the predictors that's most deterministic of the variation in `Salary_USD`.
 
 ```{r warning=FALSE}
 # Joining Modern Job Market and Cost of Living Data
-
-# Splitting `City` Variable into `City` and `State/Country`
+# Splitting Location Variable into `Location` which represents city and `State/Country`
 
 cost_living <- cost_living %>% 
-  separate(City, into = c("City", "State/Country"), sep = ",")
+  separate(City, into = c("Location", "State/Country"), sep = ",")
 
 cities <- c(unique(job_market$Location))
 
 cost_living <- cost_living %>% 
-  filter(City %in% cities )
+  filter(Location %in% cities )
+
+joined_df <- job_market %>% 
+  left_join(cost_living, by=c("Location"))
+
+joined_df <- joined_df %>% 
+  select(!c(Rank, `State/Country`))
+
+joined_df <- joined_df %>%
+  mutate(across(where(is.character), as.factor))
+```
+
+```{r}
+# Distribution of Salary between Locations (Cities)
+joined_df %>% 
+  group_by(Location) %>% 
+  ggplot(aes(Location, Salary_USD, col=Location)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(title = "Salary Distribution between Locations",
+       y = "Salary (in USD)",
+       x = "Location (City)") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+## Methodology
+
+```{r}
+joined_df %>% 
+  group_by(Location) %>% 
+  summarise(mean = mean(Salary_USD))
+
+x_vars <- c("Cost.of.Living.Index", "Rent.Index", "Cost.of.Living.Plus.Rent.Index", 
+            "Groceries.Index", "Restaurant.Price.Index, Local.Purchasing.Power.Index")
 ```
 
 
+### Research Questions
 
+## Results
 
+## Conclusion
