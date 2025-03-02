@@ -134,6 +134,11 @@ joined_df %>%
 
 ## Results
 
+```{r}
+joined_df %>% 
+  ggplot(aes(Cost.of.Living.Index, Salary_USD)) + 
+  geom_point()
+```
 
 
 ## Conclusion
