@@ -13,12 +13,29 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r include=FALSE}
 library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(GGally)
 ```
 
+<<<<<<< HEAD
 ```{r include=FALSE}
+=======
+```{r}
+x = 3+2
+y = 5+6
+x+y
+```
+
+new comment to test
+=======
+``` {r}
+>>>>>>> 7115b1ac5ea373538ca197746ff7a4c478d0c5a7
 # Loading csv files
 job_market <- read.csv("ai_job_market_insights.csv")
 cost_living <- read.csv("costofliving.csv")
+job_market
+cost_living
 ```
 
 # Project Overview: Modern Salary Modeling
@@ -66,7 +83,7 @@ Cost of Living could also be a good indicator to a person's salary. Using an ext
 
 Before developing our models, we first joined our `Job_Market` dataset with our `Cost_Living` dataset to gather all of the necessary variables in one dataset. Having all of our predictors in one dataset allows us to conduct `lm` models to compare variables across multiple sources of data. This will help us determine the predictors that's most deterministic of the variation in `Salary_USD`.
 
-```{r warning=FALSE}
+```{r, warning=FALSE}
 # Joining Modern Job Market and Cost of Living Data
 # Splitting Location Variable into `Location` which represents city and `State/Country`
 
@@ -76,6 +93,7 @@ cost_living <- cost_living %>%
 cities <- c(unique(job_market$Location))
 
 cost_living <- cost_living %>% 
+<<<<<<< HEAD
   filter(Location %in% cities )
 
 joined_df <- job_market %>% 
@@ -114,6 +132,30 @@ x_vars <- c("Cost.of.Living.Index", "Rent.Index", "Cost.of.Living.Plus.Rent.Inde
 
 
 ### Research Questions
+=======
+  filter(City %in% cities )
+
+#filters cost of living to only have the city and the cost of living column
+cost_living_subset <- cost_living %>% 
+  select(City, Cost.of.Living.Index)
+
+# we join the two datasets on their city column, which just adds the cost of living index to the job_market
+job_market <- left_join(job_market, cost_living_subset, by = c("Location" = "City"))
+
+# make all categorical data into factors
+job_market <- job_market %>%
+  mutate(across(c(Job_Title, Industry, Company_Size, Location, AI_Adoption_Level, Remote_Friendly, Automation_Risk, Required_Skills), as.factor))
+
+
+```
+
+
+#examining data plots to see if there any necesary transformations
+# need to make the plots, the issue is that there are so many categories that doing plot(job_market) is too small to read
+```{r}
+
+```
+>>>>>>> 7115b1ac5ea373538ca197746ff7a4c478d0c5a7
 
 ## Results
 

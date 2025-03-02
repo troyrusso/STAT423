@@ -1,6 +1,9 @@
 General plan sheet
 
 List of research questions:
--
--
--
+- How does the job title influence the salary of a job?
+- How does the location influence salary?
+- How does the number of required skills and automation risk affect the salary of the job?
+- How does company size impact the salary?
+- Is there a statistically significant difference in salary between different industries?
+- Something to do with Cost of Living maybe how does cost of living affect salary
