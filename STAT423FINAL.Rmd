@@ -65,14 +65,12 @@ Cost of Living could also be a good indicator to a person's salary. Using an ext
 
 \textbf{Predictor Variables:}
 \begin{itemize}
-    \item \texttt{Cost.of.Living.Index} (Categorical): Job position or role.
-    \item \texttt{Industry} (Categorical): Field of employment.
-    \item \texttt{Company\_Size} (Categorical): Size of the company (small, medium, large).
-    \item \texttt{Required\_Skills} (Categorical): Qualifications for the role.
-    \item \texttt{Automation\_Risk} (Categorical): Risk of automation in the future (low, medium, high).
-    \item \texttt{Location} (Categorical): City where the role is located.
-    \item \texttt{Remote\_Friendly} (Binary): Indicates whether the role supports remote work.
-    \item \texttt{Job\_Growth\_Projection} (Categorical): Expected growth or decline of the role.
+    \item \texttt{Cost.of.Living.Index} (Continuous): Relative cost of living in different cities
+    \item \texttt{Rent.Index} (Continuous): Relative cost of rent in comparison to other cities
+    \item \texttt{Cost.of.Living.Plus.Rent.Index} (Continuous): Relative cost of living and rent in different cities
+    \item \texttt{Groceries.Index} (Continuous): Relative grocery cost in different cities
+    \item \texttt{Restaurant.Price.Index} (Continuous): Relative cost of eating out in different cities
+    \item \texttt{Local.Purchasing.Power.Index} (Continuous): Purchasing powers of a city's average salary
 \end{itemize}
 
 ## Methodology
@@ -135,7 +133,7 @@ joined_df <- joined_df %>%
   mutate(across(where(is.character), as.factor))
 ```
 
-```{r fig.cap = "Salary distributions across location groups (city)."}
+```{r fig.cap="Salary distributions across location groups (city)."}
 # Distribution of Salary between Locations (Cities)
 joined_df %>% 
   group_by(Location) %>% 
@@ -163,6 +161,8 @@ joined_df %>%
     q1_fit1 = lm(Salary_USD ~ Job_Title + Company_Size + Location, data=joined_df)
     summary(q1_fit1)
     ```
+    Letting $\beta_i$ be a predictor to estimate $$\hat{Salary\_USD} = \beta_0 + \sum_{a} \beta_{1a} (\text{JobTitle}_a) + \sum_{b} \beta_{2b} (\text{CompanySize}_b) + \sum_{c} \beta_{3c} (\text{Location}_c)$$, where $a,b,c$ represents the specific categories. Since we are dealing with categorical variables, the value of each coefficient would be binary (0 or 1), which means the job description matches a specific set of variables or not.
+    
     This initial OLS model shows us how well the 3 categorical predictors we have chosen explains the variation of the variable `Salary_USD`. Our intercept is representative of our reference level, which in this case would be `Job_Title = AI Researcher`, `Company_Size = Small`, and `Location = Berlin`. As we can see, we have a very small $R^2$ value of 0.03736, meaning our predictors or independent variables doesn't explain a large proportion of the variance in salary, suggesting high variability in salaries. 
     
     $$R^2 = 1 - \frac{\sum (y_i - \hat{y}_i)^2}{\sum (y_i - \bar{y})^2}$$
@@ -175,7 +175,7 @@ joined_df %>%
 
     To create a better model, we need to determine which predictors require an interaction term. This means that we are looking at the if one of our predictors depends on another predictor when analyzing `Salary_USD`. Specifically, seeing if our predictor `Location` is impacted by the size of the company. To do this, we will use a side-by-side plot to see if the pattern demonstrated for each `Company_Size` is different from one another, if they are, we will use an interaction term between those two predictors
     
-    ```{r, fig.width=30, fig.height=20, fig.cap="Figure 2: Compares the Salary Distribution by Location and Company Size"}
+    ```{r, fig.width=30, fig.height=20, fig.cap="Compares the Salary Distribution by Location and Company Size"}
     joined_df %>% 
       ggplot(aes(x = Location, y = Salary_USD, fill = Company_Size)) + 
       geom_boxplot() +
@@ -188,6 +188,8 @@ joined_df %>%
       theme(axis.text.x = element_text(angle = 45, hjust = 1))
     ```
     
+    \newpage
+    
     In the figure, it is demonstrated that company size does impact the employee's salary in every country. Within all the countries seen in *Figure 2*, when grouping them by company size, they demonstrate a different distribution and patterns (except for maybe Sydney, the distributions seem fairly similar across all company sizes). This indicates that it is necessary to use an interaction term to improve our initial model
     
     ```{r}
@@ -197,6 +199,8 @@ joined_df %>%
     cat("P-value: ", summary(q1_fit2)$fstatistic[1])
     
     ```
+    
+    The equation representing the new model would be $$\hat{Salary\_USD} = \beta_0 + \sum_{a} \beta_{1a} (\text{JobTitle}_a) + \sum_{b} \beta_{2b} (\text{CompanySize}_b) + \sum_{c} \beta_{3c} (\text{Location}_c) + \beta_4 (\text{Location}_c \times \text{CompanySize}_b)$$ This is the same equation as our originial model, except we are including the interaction term.
     
     Our new model explains more of the variation in `Salary_USD` but not by much. The p-value is still relatively high so the predictors we are using doesn't appear to be significantly improving the model. Our $R^2 = 0.07194$ which is a higher proportion of the variance explained but its not enough to suggest that adding the interaction term led to a good fit.
     
