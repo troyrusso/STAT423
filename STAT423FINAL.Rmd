@@ -144,6 +144,8 @@ joined_df %>%
        y = "Salary (in USD)",
        x = "Location (City)") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
 ```
 \newpage
 

@@ -1,0 +1,33 @@
+---
+title: "\\textbf{Modern Salary Modeling Project}"
+author: "Justin Mai, Troy Russo, Isaac Muhlestein, Conan Li, Jian Kang"
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    latex_engine: xelatex
+  html_document: default
+geometry: margin=37pt
+fontsize: 11pt
+header-includes:
+  - \usepackage{titlesec}
+  - \titlespacing*{\title}{0pt}{0pt}{0pt}
+mainfont: "Times New Roman"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=FALSE}
+library(tidyverse)
+```
+
+---
+
+# Table of Contents
+
+---
+
+# Introduction
+
+**Description:** Our goal with this Modern Salary Modeling Project is to analyze modern-day jobs (most are related to AI) to attempt to make salary predictions, looking at the influence of different variables on job salaries. This notebook will use the F-statistic and a series of ANOVA tests (hypothesis and confidence intervals)to determine the best predictors for the job market of the future.
