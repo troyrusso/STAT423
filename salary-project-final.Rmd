@@ -25,37 +25,82 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 ```
 
+---
+
+# 1. Introduction
+
+**Description:** The job market can be a hard place to navigate, especially with the search of data roles in the recent years. As statistics students, many of us are leaning towards opportunities within data roles. To understand the recent market we will be analyzing data job logistics to investigate the factors and predictors that most impacts the salary of these roles. Within this report, we will be using Salary Index data reported by real people in the industry to (1) discover the factors and variables within the job description that may influence a person's job salary the most to help students like us navigate the market and (2) ...
+
+**Disclaimer:** We have pivoted from using this dataset https://www.kaggle.com/datasets/uom190346a/ai-powered-job-market-insights which is comprised of synthetic data based off the current job market regarding AI jobs to this dataset https://www.kaggle.com/datasets/murilozangari/jobs-and-salaries-in-data-field-2024/data which consists of real survey data from various people in data roles, reporting through this website https://aijobs.net/salaries/2024/. We decided to make this change because we believe that variables such as `experience_level` and `job_category` which can be found in our current dataset would be strong predictors for `salary`. We also believe that using real survey data as supposed to synthetic data would give us results that are more related to real-life circumstances, making the report more applicable for all.
 
 ---
 
-# Introduction
+# 2. Methods
 
-**Description:** Our goal with this Modern Salary Modeling Project is to analyze modern-day jobs (most are related to AI) to attempt to make salary predictions, looking at the influence of different variables on job salaries. This notebook will use the F-statistic and a series of ANOVA tests (hypothesis and confidence intervals)to determine the best predictors for the job market of the future.
+## 2.1 Data Description
+
+```{r include=FALSE}
+job_data <- read.csv("jobs_in_data_2024.csv")
+
+job_data <- job_data %>% 
+  select(!c(work_year, salary_currency, salary))
+
+cost_of_living <- read.csv("cost_of_living_2024.csv")
+
+cost_of_living <- cost_of_living %>% 
+  rename(employee_residence = Country)
+```
+
+The first dataset was collected through https://aijobs.net/salaries/2024/, it consists of 14200 different observations, with each observation representing a person in their role in 2024. The **response variable** we are measuring is `salary_in_usd` which measures a person's annual gross salary. The 8 predictors are `experience_level`, `employment_type`, `job_title`, `employee_residence`, `work_setting`, `company_location`, `company_size`, `job_category`. All of these variables are categorical where `company_size` is categorized as *S* for small, *M* for medium, and *L* for large.
+
+The second dataset consists of cost of living index by country where an index of 100 represents the living cost of NYC, United States, so all the indices are relative to that. We will merge the two datasets by `country`. The predictors we're looking at in this dataset are Cost of Living Index, Rent Index, Cost of Living Plus Rent Index, and Local Purchasing Power Index. We believe that the cost of living could be indicative of `salary_usd`.
+
+## 2.2 Data Manipulation
+
+Our primary dataset will be comprised of the two datasets described in (2.1). We are joining the two datasets on `employee_residence` which is in form of country. Now each row will consist of the categories for the job description along with the cost indexes for each respective resident. Having all of these predictors in one dataset will allow us to utilize the lm() function to uncover linear trends for all predictor variables in response to `salary`. It will also allow us to compare models easily which we will do using ANOVA tests and by calculating the F-statistic. We also want to see if being in the U.S. has an impact on salary to the rest of the world, so we are creating a new binary variable called `us_resident` to utilize as a predictor for `salary`.
+
+```{r echo=FALSE}
+# changing categorical to as.factor
+job_data <- job_data %>%
+  mutate(across(where(is.character), as.factor))
+
+# Joining the two datasets
+joined_df <- job_data %>% 
+  left_join(cost_of_living, by=c("employee_residence"))
+
+joined_df <- joined_df %>% 
+  mutate(us_resident = ifelse(employee_residence == "United States", 1, 0))
+```
+
+```{r echo=FALSE}
+categorical_fit <- lm(salary_in_usd ~ ., data=job_data)
+cat("R-Squared: ",summary(categorical_fit)$r.squared, "\n")
+cat("Adj. R-Squared: ", summary(categorical_fit)$adj.r.squared, "\n")
+overall_p_value <- summary(categorical_fit)$fstatistic
+p_value <- pf(overall_p_value[1], overall_p_value[2], overall_p_value[3], lower.tail = FALSE)
+cat("P-value:", p_value)
+```
+
+## 2.3 Model Diagnostics
+
+...
+
+## 2.4 Model Selection
+
+To determine our model, we will fit multiple linear regression models and find the model that minimizes our **AIC (Akaike Information Criterion) and/or BIC (Bayesian Information Criterion)**. If the AIC and BIC suggest different models, we will favor the model selected by lowest AIC because BIC penalizes models with a large number of observations and tends to predict less than the AIC.
 
 ---
 
-# Methods
+# 3. Results
 
-## Data Description
+## 3.1 Data Exploration
 
-## Data Manipulation
+## 3.2 Modeling
 
-## Research Questions
+### 3.3 Model Diagnostics
 
-## Model Selection
-
----
-
-# Results
-
-## Data Exploration
-
-## Modeling
-
-### Model Diagnostics
-
-### Model Descriptions
+### 3.4 Model Descriptions
 
 ---
 
-# Conclusion
+# 4. Conclusion
