@@ -51,13 +51,19 @@ cost_of_living <- cost_of_living %>%
   rename(employee_residence = Country)
 ```
 
-The first dataset was collected through https://aijobs.net/salaries/2024/, it consists of 14200 different observations, with each observation representing a person in their role in 2024. The **response variable** we are measuring is `salary_in_usd` which measures a person's annual gross salary. The 8 predictors are `experience_level`, `employment_type`, `job_title`, `employee_residence`, `work_setting`, `company_location`, `company_size`, `job_category`. All of these variables are categorical where `company_size` is categorized as *S* for small, *M* for medium, and *L* for large.
+The first dataset was collected through https://aijobs.net/salaries/2024/, it consists of 14199 different observations, with each observation representing a person in their role in 2024. The **response variable** we are measuring is `salary_in_usd` which measures a person's annual gross salary. The **8 predictors** are `experience_level`, `employment_type`, `job_title`, `employee_residence`, `work_setting`, `company_location`, `company_size`, `job_category`. All of these variables are categorical where `company_size` is categorized as *S* for small, *M* for medium, and *L* for large.
 
 The second dataset consists of cost of living index by country where an index of 100 represents the living cost of NYC, United States, so all the indices are relative to that. We will merge the two datasets by `country`. The predictors we're looking at in this dataset are Cost of Living Index, Rent Index, Cost of Living Plus Rent Index, and Local Purchasing Power Index. We believe that the cost of living could be indicative of `salary_usd`.
 
-## 2.2 Data Manipulation
+## 2.2 Data Processing
 
-Our primary dataset will be comprised of the two datasets described in (2.1). We are joining the two datasets on `employee_residence` which is in form of country. Now each row will consist of the categories for the job description along with the cost indexes for each respective resident. Having all of these predictors in one dataset will allow us to utilize the lm() function to uncover linear trends for all predictor variables in response to `salary`. It will also allow us to compare models easily which we will do using ANOVA tests and by calculating the F-statistic. We also want to see if being in the U.S. has an impact on salary to the rest of the world, so we are creating a new binary variable called `us_resident` to utilize as a predictor for `salary`.
+The primary dataset will be comprised of the two datasets described in (2.1). We are joining the two datasets on `employee_residence` which is in form of country. Now each row will consist of a specified job description along with the cost indexes for each respective resident. Having all of these predictors in one dataset will allow us to utilize the lm() function to uncover linear trends for all predictor variables in response to `salary`. It will also allow us to compare models easily which we will do using ANOVA tests and by calculating the F-statistic. The primary dataset consists of 14199 observations after joining
+
+**Data Manipulation**: Rows that consisted of NAs were in countries that weren't listed in the `cost_of_living` data, this demonstrates that their rank is low when ordering by index and there weren't a sufficient number of samples for those countries. Therefore we removed those observations (14161 observations). We also removed exact duplicate rows from the dataset (7575 observations)
+
+Mutations in the data were also made to create new predictors `us_resident` which is a binary variable that denotes if the job is in the U.S. or not, and `experience_numeric` which turns `experience_level` into numerical values (i.e. 1 - "Entry-Level", 2 - Mid-level", 3 - "Senior", 4 - "Executive"), this transformation will support our use of linear modeling and allow us to easily check assumptions such as linearity assumptions. Also, because we have too many different job titles, we decided to aggregate these job titles by keywords into 8 categories (Data Scientist, Data Analyst, Machine Learning, Data Engineer, Leadership, Business Intelligence, Research, Other). This will consolidate our data and make linear models more interpretable
+
+We are also reordering values to ensure that our **baseline term** is what we want it to be (i.e. releveling small companies to be the first type and entry-level jobs to be the first job types). 
 
 ```{r echo=FALSE}
 # changing categorical to as.factor
@@ -68,22 +74,47 @@ job_data <- job_data %>%
 joined_df <- job_data %>% 
   left_join(cost_of_living, by=c("employee_residence"))
 
+# removing NAs
+joined_df <- na.omit(joined_df)
+
+# new variable
 joined_df <- joined_df %>% 
   mutate(us_resident = ifelse(employee_residence == "United States", 1, 0))
-```
 
-```{r echo=FALSE}
-categorical_fit <- lm(salary_in_usd ~ ., data=job_data)
-cat("R-Squared: ",summary(categorical_fit)$r.squared, "\n")
-cat("Adj. R-Squared: ", summary(categorical_fit)$adj.r.squared, "\n")
-overall_p_value <- summary(categorical_fit)$fstatistic
-p_value <- pf(overall_p_value[1], overall_p_value[2], overall_p_value[3], lower.tail = FALSE)
-cat("P-value:", p_value)
+# changing experience level to a numeric
+joined_df <- joined_df %>%
+  mutate(experience_numeric = case_when(
+    experience_level == "Entry-level" ~ 1,
+    experience_level == "Mid-level" ~ 2,
+    experience_level == "Senior" ~ 3,
+    experience_level == "Executive" ~ 4
+  ))
+
+# ordering levels
+joined_df$company_size <- factor(joined_df$company_size, levels = c("S", "M", "L"))
+joined_df$experience_level <- factor(joined_df$experience_level, levels = c("Entry-level", "Mid-level", "Senior", "Executive"))
+
+# aggregating job titles to job categories
+joined_df <- joined_df %>%
+  mutate(job_category = case_when(
+    grepl("Data Scientist|Data Science|Integration|Applied Scientist", job_title, ignore.case = TRUE) ~ "Data Scientist",
+    grepl("Analyst|Analytics|Modeler", job_title, ignore.case = TRUE) ~ "Data Analyst",
+    grepl("Machine Learning|ML|AI", job_title, ignore.case = TRUE) ~ "Machine Learning",
+    grepl("Engineer|Architect|Developer", job_title, ignore.case = TRUE) ~ "Data Engineer",
+    grepl("Manager|Director|Lead|Head|Management", job_title, ignore.case = TRUE) ~ "Leadership",
+    grepl("Business Intelligence|BI", job_title, ignore.case = TRUE) ~ "Business Intelligence",
+    grepl("Research", job_title, ignore.case = TRUE) ~ "Research",
+    TRUE ~ "Other"
+  ))
+
+# removing duplicate rows
+joined_df <- joined_df %>% 
+  distinct()
 ```
 
 ## 2.3 Model Diagnostics
 
-...
+
 
 ## 2.4 Model Selection
 
@@ -94,6 +125,16 @@ To determine our model, we will fit multiple linear regression models and find t
 # 3. Results
 
 ## 3.1 Data Exploration
+
+```{r echo=FALSE, warning=FALSE}
+joined_df %>% 
+  ggplot(aes(x = experience_level, y = salary_in_usd)) + 
+  geom_boxplot() + 
+  facet_wrap(~ us_resident, labeller = labeller(us_resident = c("0" = "Non-U.S. Resident", "1" = "U.S. Resident"))) + 
+  labs(title = "Salary Distribution by Experience Level",
+       x = "Experience Level",
+       y = "Salary (USD)")
+```
 
 ## 3.2 Modeling
 
