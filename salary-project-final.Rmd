@@ -114,11 +114,45 @@ joined_df <- joined_df %>%
 
 ## 2.3 Model Diagnostics
 
+**Linear Modeling Assumptions**:
 
+\begin{itemize}
+    \item \textbf{Linearity}: The relationship between the predictor and response is linear.
+    \item \textbf{Independence}: All observations are independent of one another (pair-wise independence).
+    \item \textbf{Homoscedasticity}: The variance of residuals is constant across predictor levels.
+    \item \textbf{Residual Normality}: The residuals follow a normal distribution.
+\end{itemize}
 
-## 2.4 Model Selection
+We know that the reported job descriptions are all independent of one another through the data description.
 
-To determine our model, we will fit multiple linear regression models and find the model that minimizes our **AIC (Akaike Information Criterion) and/or BIC (Bayesian Information Criterion)**. If the AIC and BIC suggest different models, we will favor the model selected by lowest AIC because BIC penalizes models with a large number of observations and tends to predict less than the AIC.
+The model that we are using seems highly categorical, even after our data transformation process, which would result in very discrete predictions. To fix this issue we want to create a new interaction term and turn it into a predictor variable, adding a continuous predictor for `salary_usd`. We hypothesize that salary growth will vary by location, therefore, we are creating an interaction term between `experience_numeric` and the Cost of Living Index to test this (experience combined with living costs could impact salary growth differently).
+
+The residuals when using a non-transformed model is skewed due to the deviations within the tails in our qq-plot, to fix this issue, we would have to use a **log-transformation** on the data. The variance of the residuals is also constant and there is a clear linear and positive relationship between the predictor and response.
+
+```{r message=FALSE, echo=FALSE}
+# mutating data to create interaction term
+joined_df <- joined_df %>% 
+  mutate(exp_cost_int = experience_numeric * Cost.of.Living.Index)
+
+par(mfrow = c(1, 2))
+plot(lm(salary_in_usd ~ exp_cost_int, data = joined_df), which = 2)
+plot(lm(log(salary_in_usd) ~ log(exp_cost_int), data = joined_df), which = 2) + title("Log-Transformation")
+par(mfrow = c(1, 1))  
+```
+
+To test the assumptions for our categorical variables...
+
+```{r message=FALSE, echo=FALSE}
+mean_salary <- joined_df %>%
+  group_by(experience_level, company_size) %>%
+  summarize(mean_salary = mean(salary_in_usd))
+
+ggplot(mean_salary, aes(x = experience_level, y = mean_salary, color = company_size, group = company_size)) +
+  geom_point(size = 3) +
+  geom_line() +
+  labs(title = "Mean Salary by Experience Level and Company Size") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
 
 ---
 
@@ -136,11 +170,13 @@ joined_df %>%
        y = "Salary (USD)")
 ```
 
-## 3.2 Modeling
+## 3.2 Model Selection
 
-### 3.3 Model Diagnostics
+To determine our model, we will fit multiple linear regression models and find the model that minimizes our **AIC (Akaike Information Criterion) and/or BIC (Bayesian Information Criterion)**. If the AIC and BIC suggest different models, we will favor the model selected by lowest AIC because BIC penalizes models with a large number of observations and tends to predict less than the AIC.
 
-### 3.4 Model Descriptions
+## 3.3 Modeling
+
+## 3.5 Model Descriptions
 
 ---
 
