@@ -176,6 +176,130 @@ joined_df %>%
 
 To determine our model, we will fit multiple linear regression models and find the model that minimizes our **AIC (Akaike Information Criterion) and/or BIC (Bayesian Information Criterion)**. If the AIC and BIC suggest different models, we will favor the model selected by lowest AIC because BIC penalizes models with a large number of observations and tends to predict less than the AIC.
 
+We can use a step function from the MASS package that computes the best model purely based on the AIC by comparing every potential model combination and returning the model with the lowest AIC. This model may be overfit however, since AIC does not account for model complexity.
+```{r, echo = F, eval = F}
+# Load the MASS package for stepAIC
+library(MASS)
+
+# Fit the full model with all predictors
+full_model <- lm(salary_in_usd ~ ., data = joined_df)
+
+# Perform stepwise selection using AIC (both directions)
+step_model <- stepAIC(full_model, direction = "both", trace = FALSE)
+
+# Display the summary of the selected model
+summary(step_model)
+
+
+```
+Now that we have the model that we have found from AIC we can test the assumptions of the model as well as performing cross validation to test the valididity of the model. We can also perform an anova test to see if our predictors are significant.
+```{r}
+# Assuming your final model is stored in 'step_model' and your data frame is 'joined_df'
+
+# Alternatively, you can plot individual diagnostic plots:
+# Residuals vs Fitted
+plot(step_model$fitted.values, step_model$residuals,
+     main = "Residuals vs Fitted",
+     xlab = "Fitted Values", ylab = "Residuals")
+abline(h = 0, col = "red")
+
+# Q-Q Plot for Normality of Residuals
+qqnorm(step_model$residuals, main = "Q-Q Plot")
+qqline(step_model$residuals, col = "red")
+
+# Testing for heteroscedasticity using the Breusch-Pagan test
+library(lmtest)
+bp_test <- bptest(step_model)
+print(bp_test)  # p-value < 0.05 indicates potential heteroscedasticity
+
+# 2. Model Validation: Cross-Validation -----------------------------
+
+# Using the caret package for 10-fold cross-validation
+# Install caret if needed: install.packages("caret")
+library(caret)
+set.seed(123)  # for reproducibility
+
+# Define training control for 10-fold cross-validation
+train_control <- trainControl(method = "cv", number = 10)
+
+# Refit the model using caret's train() function. 
+# Here, we use the same predictors that were selected in your step_model.
+cv_model <- train(salary_in_usd ~ experience_level + job_title + employee_residence + 
+                  work_setting + company_size, 
+                  data = joined_df, 
+                  method = "lm", 
+                  trControl = train_control)
+print(cv_model)
+
+
+# 3. Theoretical Considerations -------------------------------------
+# Although not strictly "code," here are some steps to integrate theory:
+
+# - Review each predictor’s significance and consider if domain knowledge suggests its retention.
+#   For example, even if certain levels of a categorical predictor have high p-values, the variable might still be
+#   important overall. You could run an ANOVA to test the overall significance of categorical variables:
+anova_result <- anova(step_model)
+print(anova_result)
+```
+The cross validation tells us that our model is not over fitting since the $R^2$ is only about 35%, but also suggests that we can improve our model because the RMSE is quite high at 54993, so we may need to add more interactions or do some non linear transformations of the data.
+
+The residual plot shows a funnel shape, which suggests hetereoscadascity of the variance and the residuals do not appear to be centered at zero, which indicates that there is bias. The plots indicate that we may want to use the log of the salary instead of salary as our response.
+
+we can now run the step AIC function again using the log(salary) as our response and perform the same model diagnostic tests as above. We also add an interaction term between experience_level and company size.
+
+```{r}
+joined_df$log_salary <- log(joined_df$salary_in_usd)
+log_full_model <- lm(log_salary ~ ., data = joined_df)
+step_log_model <- stepAIC(log_full_model, direction = "both", trace = FALSE)
+summary(step_log_model)
+
+model_with_interaction <- update(step_log_model, 
+                                 . ~ . + experience_level:company_size)
+
+# 2. Perform stepwise selection again starting from the updated model
+step_log_model_interact <- stepAIC(model_with_interaction, 
+                                   direction = "both", 
+                                   trace = FALSE)
+
+# 3. Review the summary of the new model
+summary(step_log_model_interact)
+
+
+plot(step_log_model_interact$fitted.values, step_log_model_interact$residuals,
+     main = "Residuals vs Fitted",
+     xlab = "Fitted Values", ylab = "Residuals")
+abline(h = 0, col = "red")
+
+qqnorm(step_log_model_interact$residuals, main = "Q-Q Plot")
+qqline(step_log_model_interact$residuals, col = "red")
+
+bp_test <- bptest(step_log_model_interact)
+print(bp_test)  # p-value < 0.05 indicates potential heteroscedasticity
+
+set.seed(123)  # for reproducibility
+train_control <- trainControl(method = "cv", number = 10)
+cv_model <- train(log_salary ~ experience_level + job_title + employee_residence + 
+                  work_setting + company_size, 
+                  data = joined_df, 
+                  method = "lm", 
+                  trControl = train_control)
+print(cv_model)
+anova_result <- anova(step_log_model_interact)
+print(anova_result)
+```
+Our log transformed model has a much higher $R^2$ indicating that our model explains a lot more of the variability in log(salary) than it does salary. Although our residual plot still shows bias and heteroscedasity, so we need to consider what other transformations we can make.
+
+```{r}
+library(MASS)
+bc <- boxcox(lm(log_salary ~ .+ experience_level:company_size, data = joined_df), plotit = TRUE)
+# Choose lambda based on the plot and refit using transformed response:
+lambda_opt <- bc$x[which.max(bc$y)]
+joined_df$trans_salary <- if(lambda_opt == 0) log(joined_df$salary_in_usd) else (joined_df$salary_in_usd^lambda_opt - 1)/lambda_opt
+
+```
+The box cox indicates that the log transformed model is the best power model for our data, so the changes we need to make will be on indiviual predictors and not the entire data.
+
+
 ## 3.3 Modeling
 
 ## 3.5 Model Descriptions
