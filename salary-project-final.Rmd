@@ -129,20 +129,22 @@ The model that we are using seems highly categorical, even after our data transf
 
 The residuals when using a non-transformed model is skewed due to the deviations within the tails in our qq-plot, to fix this issue, we would have to use a **log-transformation** on the data. The variance of the residuals is also constant and there is a clear linear and positive relationship between the predictor and response.
 
-```{r message=FALSE, echo=FALSE}
+```{r message=FALSE, echo=FALSE, fig.width=5, fig.height=3, fig.align='center', fig.cap='Normality check for Experience and Cost of Living Index Interaction variable on Salary, comparison between no transformation and log-transformation'}
 # mutating data to create interaction term
 joined_df <- joined_df %>% 
   mutate(exp_cost_int = experience_numeric * Cost.of.Living.Index)
 
 par(mfrow = c(1, 2))
 plot(lm(salary_in_usd ~ exp_cost_int, data = joined_df), which = 2)
-plot(lm(log(salary_in_usd) ~ log(exp_cost_int), data = joined_df), which = 2) + title("Log-Transformation")
+title("No Transformation")
+plot(lm(log(salary_in_usd) ~ log(exp_cost_int), data = joined_df), which = 2)
+title("Log-Transformation")
 par(mfrow = c(1, 1))  
 ```
 
-To test the assumptions for our categorical variables...
+To test the assumptions for our categorical variables we must look at the average salary by category, to see if there is a clear trend between the different experience levels in respective company size. This checks off the linearity assumption because there is a (somewhat) linear increasing trend for all the experience levels and we can see that adding the company size variable and the necessity of an interaction effect between `experience_level` and `company_size` because although the trend is increasing for each company size, they are increasing at a separate rate
 
-```{r message=FALSE, echo=FALSE}
+```{r message=FALSE, echo=FALSE, fig.width=5, fig.height=3, fig.align='center', fig.cap='Interaction between Experience Level and Company Size on Salary'}
 mean_salary <- joined_df %>%
   group_by(experience_level, company_size) %>%
   summarize(mean_salary = mean(salary_in_usd))
