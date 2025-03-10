@@ -23,6 +23,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r include=FALSE}
 library(tidyverse)
+library(leaps)
 ```
 
 ---
@@ -142,7 +143,7 @@ title("Log-Transformation")
 par(mfrow = c(1, 1))  
 ```
 
-To test the assumptions for our categorical variables we must look at the average salary by category, to see if there is a clear trend between the different experience levels in respective company size. This checks off the linearity assumption because there is a (somewhat) linear increasing trend for all the experience levels and we can see that adding the company size variable and the necessity of an interaction effect between `experience_level` and `company_size` because although the trend is increasing for each company size, they are increasing at a separate rate
+To test the assumptions for our categorical variables we must look at the average salary by category, to see if there is a clear trend between the different experience levels in respective company size. This checks off the linearity assumption because there is a (somewhat) linear increasing trend for all the experience levels. We can see that we don't need an interaction effect between `experience_level` and `company_size` because the trend is increasing for each company size at around the same rate. We can test this using an ANOVA test at $\alpha = 0.05$ to see if adding an interaction term effects the model.
 
 ```{r message=FALSE, echo=FALSE, fig.width=5, fig.height=3, fig.align='center', fig.cap='Interaction between Experience Level and Company Size on Salary'}
 mean_salary <- joined_df %>%
@@ -155,6 +156,18 @@ ggplot(mean_salary, aes(x = experience_level, y = mean_salary, color = company_s
   labs(title = "Mean Salary by Experience Level and Company Size") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
+
+```{r include=FALSE}
+model_df <- joined_df %>% 
+  select(!c(employment_type, work_setting, job_title, Cost.of.Living.Plus.Rent.Index, Local.Purchasing.Power.Index, Groceries.Index, Restaurant.Price.Index))
+```
+
+```{r echo=FALSE}
+fit1 <- lm(salary_in_usd ~ experience_level + company_size, data=model_df)
+fit2 <- lm(salary_in_usd ~ experience_level * company_size, data=model_df)
+anova(fit1, fit2)
+```
+As we can see from the ANOVA test, our the p-value of 0.3008 is much higher than our $\alpha = 0.05$, therefore, the addition of an interaction isn't impactful to our linear model.
 
 ---
 
@@ -176,10 +189,24 @@ joined_df %>%
 
 To determine our model, we will fit multiple linear regression models and find the model that minimizes our **AIC (Akaike Information Criterion) and/or BIC (Bayesian Information Criterion)**. If the AIC and BIC suggest different models, we will favor the model selected by lowest AIC because BIC penalizes models with a large number of observations and tends to predict less than the AIC.
 
+```{r}
+full_fit <- lm(salary_in_usd ~ ., data=model_df)
+summary(full_fit)$r.sq
+fit1 <- lm(salary_in_usd ~ experience_level + company_size, data=model_df)
+summary(fit1)$r.sq
+fit2 <- lm(salary_in_usd ~ experience_level + company_size, data=model_df)
+summary(fit2)$r.sq
+
+anova(fit1, fit2)
+```
+
 ## 3.3 Modeling
 
-## 3.5 Model Descriptions
+## 3.4 Model Descriptions
 
+The initial model was a multiple linear regression model with categorical and numerical predictors to predict 'salary_in_usd'. We found Heteroscedasticity and non-normally distributed residuals, hence through application of log transformation to minimize AIC we can improve the model significantly.  
+
+The final model uses 'experience_level', 'job_title','employee_residence','work_setting','company_size' and an interaction term 'experience_level:company_size' as predictors to predict 'log_salary'. We can get the actual salary by taking the exponent of the log. This model assumes linear relationship, and there seems to have residual bias which suggests some possible non-linear relationships.
 ---
 
 # 4. Conclusion
