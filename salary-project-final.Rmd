@@ -156,6 +156,11 @@ ggplot(mean_salary, aes(x = experience_level, y = mean_salary, color = company_s
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
+```{r}
+model_df <- joined_df %>% 
+  select(!c(employment_type, work_setting, job_title, Cost.of.Living.Plus.Rent.Index, Local.Purchasing.Power.Index, Groceries.Index, Restaurant.Price.Index))
+```
+
 ---
 
 # 3. Results
@@ -301,33 +306,6 @@ The box cox indicates that the log transformed model is the best power model for
 
 
 ## 3.3 Modeling
-Now we have selected the model using AIC with transformations, let's construct a model using log transformed response variable.
-```{r}
-# We first fit a linear model
-final_model <- lm(log_salary ~ . + experience_level:company_size, 
-                  data = joined_df)
-
-
-summary(final_model)
-```
-We check if the assumptions of linear regressions are met through the following Residuals vs Fitted plot and a QQ plot. The assumptions are linearity, independence, homoscedasticity and normality.
-```{r}
-# TA plot to check linearity, independence, homoscedasticity
-plot(final_model$fitted.values, final_model$residuals,
-     main = "Residuals vs Fitted",
-     xlab = "Fitted Values", ylab = "Residuals")
-     abline(h = 0, col = "red")
-
-# QQ Plot to check normality 
-qqnorm(final_model$residuals, main = "QQ Plot")
-qqline(final_model$residuals, col = "red")
-```
-
-By using ANOVA, we can verify the overall significance of our model and predictors. 
-```{r}
-anova_result <- anova(final_model)
-print(anova_result)
-```
 
 ## 3.5 Model Descriptions
 
