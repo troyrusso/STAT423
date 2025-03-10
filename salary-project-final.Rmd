@@ -308,7 +308,9 @@ The box cox indicates that the log transformed model is the best power model for
 ## 3.3 Modeling
 
 ## 3.5 Model Descriptions
+The initial model was a multiple linear regression model with categorical and numerical predictors to predict 'salary_in_usd'. We found Heteroscedasticity and non-normally distributed residuals, hence through application of log transformation to minimize AIC we can improve the model significantly.  
 
+The final model uses 'experience_level', 'job_title','employee_residence','work_setting','company_size' and an interaction term 'experience_level:company_size' as predictors to predict 'log_salary'. We can get the actual salary by taking the exponent of the log. This model assumes linear relationship, and there seems to have residual bias which suggests some possible non-linear relationships.
 ---
 
 # 4. Conclusion
