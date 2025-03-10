@@ -156,6 +156,11 @@ ggplot(mean_salary, aes(x = experience_level, y = mean_salary, color = company_s
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
+```{r}
+model_df <- joined_df %>% 
+  select(!c(employment_type, work_setting, job_title, Cost.of.Living.Plus.Rent.Index, Local.Purchasing.Power.Index, Groceries.Index, Restaurant.Price.Index))
+```
+
 ---
 
 # 3. Results
