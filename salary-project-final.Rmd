@@ -24,6 +24,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r include=FALSE}
 library(tidyverse)
 library(leaps)
+library(dplyr)
 ```
 
 ---
@@ -160,6 +161,19 @@ ggplot(mean_salary, aes(x = experience_level, y = mean_salary, color = company_s
 ```{r include=FALSE}
 model_df <- joined_df %>% 
   select(!c(employment_type, work_setting, job_title, Cost.of.Living.Plus.Rent.Index, Local.Purchasing.Power.Index, Groceries.Index, Restaurant.Price.Index))
+
+set.seed(123)  # Ensure reproducibility
+
+# Calculate the total number of rows in model_df
+n <- nrow(model_df)
+
+# Randomly sample indices for the 20% test set
+test_indices <- sample(seq_len(n), size = floor(0.2 * n))
+
+# Create the test set and candidate (training) set
+test_set <- model_df[test_indices, ]
+candidate_set <- model_df[-test_indices, ]
+
 ```
 
 ```{r echo=FALSE}
@@ -176,7 +190,7 @@ As we can see from the ANOVA test, our the p-value of 0.3008 is much higher than
 ## 3.1 Data Exploration
 
 ```{r echo=FALSE, warning=FALSE}
-joined_df %>% 
+model_df %>% 
   ggplot(aes(x = experience_level, y = salary_in_usd)) + 
   geom_boxplot() + 
   facet_wrap(~ us_resident, labeller = labeller(us_resident = c("0" = "Non-U.S. Resident", "1" = "U.S. Resident"))) + 
@@ -216,7 +230,7 @@ We can use a step function from the MASS package that computes the best model pu
 library(MASS)
 
 # Fit the full model with all predictors
-full_model <- lm(salary_in_usd ~ ., data = joined_df)
+full_model <- lm(salary_in_usd ~ ., data = model_df)
 
 # Perform stepwise selection using AIC (both directions)
 step_model <- stepAIC(full_model, direction = "both", trace = FALSE)
@@ -282,8 +296,8 @@ The residual plot shows a funnel shape, which suggests hetereoscadascity of the 
 we can now run the step AIC function again using the log(salary) as our response and perform the same model diagnostic tests as above. We also add an interaction term between experience_level and company size.
 
 ```{r}
-joined_df$log_salary <- log(joined_df$salary_in_usd)
-log_full_model <- lm(log_salary ~ ., data = joined_df)
+model_df$log_salary <- log(model_df$salary_in_usd)
+log_full_model <- lm(log_salary ~ ., data = model_df)
 step_log_model <- stepAIC(log_full_model, direction = "both", trace = FALSE)
 summary(step_log_model)
 
@@ -314,7 +328,7 @@ set.seed(123)  # for reproducibility
 train_control <- trainControl(method = "cv", number = 10)
 cv_model <- train(log_salary ~ experience_level + job_title + employee_residence + 
                   work_setting + company_size, 
-                  data = joined_df, 
+                  data = model_df, 
                   method = "lm", 
                   trControl = train_control)
 print(cv_model)
@@ -325,10 +339,10 @@ Our log transformed model has a much higher $R^2$ indicating that our model expl
 
 ```{r}
 library(MASS)
-bc <- boxcox(lm(log_salary ~ .+ experience_level:company_size, data = joined_df), plotit = TRUE)
+bc <- boxcox(lm(log_salary ~ .+ experience_level:company_size, data = model_df), plotit = TRUE)
 # Choose lambda based on the plot and refit using transformed response:
 lambda_opt <- bc$x[which.max(bc$y)]
-joined_df$trans_salary <- if(lambda_opt == 0) log(joined_df$salary_in_usd) else (joined_df$salary_in_usd^lambda_opt - 1)/lambda_opt
+model_df$trans_salary <- if(lambda_opt == 0) log(model_df$salary_in_usd) else (model_df$salary_in_usd^lambda_opt - 1)/lambda_opt
 
 ```
 The box cox indicates that the log transformed model is the best power model for our data, so the changes we need to make will be on indiviual predictors and not the entire data.
