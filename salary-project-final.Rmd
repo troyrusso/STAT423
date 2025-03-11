@@ -192,14 +192,23 @@ To determine our model, we will fit multiple linear regression models and find t
 ```{r echo=FALSE}
 fit <- regsubsets(log(salary_in_usd) ~ experience_numeric + us_resident + log(exp_cost_int) + Rank + company_size + job_category, data = model_df, really.big=T)
 
-summary(fit)
+summary_fit <- summary(fit)
 
 which.min(summary(fit)$bic)
 which.min(summary(fit)$cp)
 which.max(summary(fit)$adjr2)
 ```
 
-The BIC, CP, and Adjusted $R^2$, all tells me that `experience numeric`, `us_resident`, `Rank`, `company_size`, and `job_category` 
+```{r echo=FALSE}
+n <- nrow(model_df)
+rss <- summary_fit$rss
+k <- apply(summary_fit$which, 1, sum) 
+
+aic_values <- n * log(rss / n) + 2 * k
+which.min(aic_values)
+```
+
+The AIC, BIC, CP, and Adjusted $R^2$, all tells me that `experience numeric`, `us_resident`, `Rank`, `company_size`, and `job_category` 
 
 ## 3.3 Modeling
 
