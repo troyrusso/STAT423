@@ -244,7 +244,7 @@ which.min(aic_values)
 The AIC, BIC, CP, and Adjusted $R^2$, all tells me that `experience numeric`, `us_resident`, `Rank`, `company_size`, and `job_category` 
 
 We can use a step function from the MASS package that computes the best model purely based on the AIC by comparing every potential model combination and returning the model with the lowest AIC. This model may be overfit however, since AIC does not account for model complexity.
-```{r, echo = F, eval = F}
+```{r, echo = F}
 # Load the MASS package for stepAIC
 library(MASS)
 
@@ -316,7 +316,7 @@ we can now run the step AIC function again using the log(salary) as our response
 
 ```{r}
 model_df$log_salary <- log(model_df$salary_in_usd)
-log_full_model <- lm(log_salary ~ .- salary_in_usd, data = model_df)
+log_full_model <- lm(log_salary ~ .- salary_in_usd -log_salary, data = model_df)
 step_log_model <- stepAIC(log_full_model, direction = "both", trace = FALSE)
 summary(step_log_model)
 
@@ -343,14 +343,6 @@ qqline(step_log_model_interact$residuals, col = "red")
 bp_test <- bptest(step_log_model_interact)
 print(bp_test)  # p-value < 0.05 indicates potential heteroscedasticity
 
-set.seed(123)  # for reproducibility
-train_control <- trainControl(method = "cv", number = 10)
-cv_model <- train(log_salary ~ experience_level + job_title + employee_residence + 
-                  work_setting + company_size, 
-                  data = model_df, 
-                  method = "lm", 
-                  trControl = train_control)
-print(cv_model)
 anova_result <- anova(step_log_model_interact)
 print(anova_result)
 ```
@@ -371,9 +363,117 @@ The box cox indicates that the log transformed model is the best power model for
 
 
 ## 3.5 Model Descriptions
-The initial model was a multiple linear regression model with categorical and numerical predictors to predict 'salary_in_usd'. We found Heteroscedasticity and non-normally distributed residuals, hence through application of log transformation to minimize AIC we can improve the model significantly.  
 
-The final model uses 'experience_level', 'job_title','employee_residence','work_setting','company_size' and an interaction term 'experience_level:company_size' as predictors to predict 'log_salary'. We can get the actual salary by taking the exponent of the log. This model assumes linear relationship, and there seems to have residual bias which suggests some possible non-linear relationships.
+After comparing multiple candidate models, our final chosen model regresses **log(salary_in_usd)** on several predictors:
+
+\[
+\log(\text{salary_in_usd}) \;=\; \beta_0 
+\;+\; \beta_1\,(\text{experience\_level}) 
+\;+\; \beta_2\,(\text{job\_title}) 
+\;+\; \beta_3\,(\text{employee\_residence})
+\;+\; \beta_4\,(\text{work\_setting})
+\;+\; \beta_5\,(\text{company\_size})
+\;+\; \beta_6\,(\text{experience\_level}\,\times\,\text{company\_size})
+\;+\;\cdots
+\]
+
+### 1. **Log Transformation**
+We transformed the salary to \(\log(\text{salary\_usd})\) to address heteroscedasticity and non‐normal residuals discovered in the initial model. Interpreting coefficients on the log‐scale means that each unit increase in a predictor corresponds to a *multiplicative* change in salary, rather than an additive one. For example:
+- If \(\beta_1 = 0.10\) for a given predictor \(X\), then a **1‐unit** increase in \(X\) is associated with about a **10.5%** increase in salary \(\bigl(e^{0.10} - 1 \approx 0.105\bigr)\).
+
+### 2. **Baseline Levels and Interpretation**
+Many of our predictors are categorical. By default, R sets the first factor level of each predictor as the “baseline,” and the model estimates how other levels differ **relative** to that baseline. Specifically:
+- **experience_level**: “Entry‐level” is our baseline. Coefficients for “Mid‐level,” “Senior,” and “Executive” show how salaries differ (in log‐units) from entry‐level roles.
+- **company_size**: “S” (small) is our baseline. Coefficients for “M” and “L” measure how medium or large companies differ from small ones in terms of salary.
+- **job_title, work_setting, employee_residence**: Similar logic applies—each coefficient is relative to its baseline category.
+
+### 3. **Significant Predictors**
+Based on the final model summary (not shown here in detail), we typically see the following patterns:
+- **experience_level**: Highly significant, with more senior roles (e.g., “Senior,” “Executive”) associated with higher \(\log(\text{salary})\). This implies strong upward salary trends as experience grows.
+- **company_size**: Medium or large companies might pay more, on average, than small companies—but the magnitude and significance can vary by the data.
+- **job_title**: Certain roles (e.g., “Data Scientist,” “Machine Learning”) often command higher salaries relative to baseline roles.
+- **employee_residence**: Countries or regions with different cost‐of‐living indices can have substantially different salary norms.
+- **work_setting**: If “Remote” vs. “In‐Office” or other setups are included, each may show a different average salary level.
+
+### 4. **Interaction: `experience_level : company_size`**
+We included an interaction between **experience_level** and **company_size** to test whether the *effect* of experience on salary depends on the size of the company. Interpreting an interaction on the log‐scale:
+- The coefficient of `(Senior : Large)` tells us the additional log‐salary *beyond* simply adding the main effects of “Senior” and “Large” separately.  
+- If this interaction is positive and significant, it indicates that seniority in larger companies *amplifies* the salary effect compared to small companies.
+
+### 5. **Goodness‐of‐Fit**
+- **\(R^2\) on the log scale**: While a higher \(R^2\) indicates better explanatory power, we are primarily interested in whether major assumptions (linearity, normality of residuals) are met.
+- **RMSE or MSE** on the **log scale**: Tells us how far predictions deviate from actual \(\log(\text{salary})\). In exponentiated form, it helps gauge the typical percentage error in predictions.
+
+### 6. **Exponentiating Predictions to Get Actual Salary**
+Since the model predicts \(\log(\text{salary})\):
+\[
+\hat{y}_{\text{log}} = \beta_0 \;+\;\beta_1 x_1 \;+\;\dots
+\]
+To get back to the **predicted salary**, compute:
+\[
+\hat{\text{salary}} = e^{\hat{y}_{\text{log}}}
+\]
+Any confidence or prediction intervals on the log scale can similarly be exponentiated to get intervals in dollar terms.
+
+
+
+
+
+
+# 3.6 Results
+
+```{r test-set-results, echo=FALSE}
+# 1. Fit the final model on the "candidate_set"
+#    (This assumes you've decided on a final formula from AIC/BIC or stepwise.)
+final_model <- step_log_model_interact
+
+# 2. Generate predictions on the test set
+test_predictions_log <- predict(final_model, newdata = test_set)
+
+# 3. Evaluate performance
+#    (a) MSE on the log scale
+test_mse_log <- mean((log(test_set$salary_in_usd) - test_predictions_log)^2)
+
+#    (b) RMSE on the log scale
+test_rmse_log <- sqrt(test_mse_log)
+
+#    (c) Convert predictions from log-salary to salary
+test_predictions_salary <- exp(test_predictions_log)
+
+#    (d) MSE on the *original* salary scale (optional)
+#        We'll compare predicted salary vs. actual salary_in_usd
+test_mse_salary <- mean((test_set$salary_in_usd - test_predictions_salary)^2)
+test_rmse_salary <- sqrt(test_mse_salary)
+
+# 4. Print out the results
+cat("Test Set Results (Log-Scale):\n")
+cat(" - MSE (log-scale):", round(test_mse_log, 4), "\n")
+cat(" - RMSE (log-scale):", round(test_rmse_log, 4), "\n\n")
+
+cat("Test Set Results (Original Salary Scale):\n")
+cat(" - MSE (USD):", round(test_mse_salary, 2), "\n")
+cat(" - RMSE (USD):", round(test_rmse_salary, 2), "\n")
+
+```
+
+
+```{r test-set-plot, echo=FALSE, fig.width=5, fig.height=4}
+library(ggplot2)
+
+results_df <- data.frame(
+  actual_salary = test_set$salary_in_usd,
+  predicted_salary = test_predictions_salary
+)
+
+ggplot(results_df, aes(x = actual_salary, y = predicted_salary)) +
+  geom_point(alpha = 0.5) +
+  geom_abline(slope = 1, intercept = 0, color = "red") +
+  labs(title = "Test Set: Predicted vs. Actual Salary",
+       x = "Actual Salary (USD)",
+       y = "Predicted Salary (USD)") +
+  theme_minimal()
+```
 
 
 # 4. Conclusion
+
