@@ -179,6 +179,16 @@ test_set <- model_df[test_indices, ]
 candidate_set <- model_df[-test_indices, ]
 
 ```
+One of the assumptions we are making in our model is that the predictors we are using are independent. Thus, it becomes expedient to test the multicollinearity of our predictors, to ensure that they are each independent of one another and add new information. Because a large majority of our predictors are categorical, The VIF (Variance Inflation Factor) will be most effective in calculating that multicollinearity:
+
+```{r}
+
+base_model <- lm(salary_in_usd~ experience_level + company_location+ 
+                                company_size + job_category + Rank,
+                 data = model_df)
+
+vif(base_model)
+```
 
 ```{r echo=FALSE}
 fit1 <- lm(salary_in_usd ~ experience_level + company_size, data=model_df)
