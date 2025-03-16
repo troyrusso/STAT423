@@ -25,6 +25,8 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(leaps)
 library(dplyr)
+library(corrplot)
+library(car)
 ```
 
 ---
@@ -159,6 +161,8 @@ ggplot(mean_salary, aes(x = experience_level, y = mean_salary, color = company_s
 ```
 
 ```{r include=FALSE}
+install.packages("dplyr")
+library(dplyr)
 model_df <- joined_df %>% 
   select(!c(employment_type, work_setting, job_title, Cost.of.Living.Plus.Rent.Index, Local.Purchasing.Power.Index, Groceries.Index, Restaurant.Price.Index))
 
@@ -183,21 +187,26 @@ anova(fit1, fit2)
 ```
 As we can see from the ANOVA test, our the p-value of 0.3008 is much higher than our $\alpha = 0.05$, therefore, the addition of an interaction isn't impactful to our linear model.
 
----
+### 2.4 Correlation and Multicollinearity Analysis
+```{r correlation-vif, echo=FALSE, warning=FALSE, message=FALSE}
 
-# 3. Results
+# 1. Correlation Matrix ---------------------------------------------
+# Select numeric columns only (excluding the response itself if needed)
+num_vars <- joined_df %>%
+  select_if(is.numeric) #%>%
+  # Optional: if you have columns like "salary_in_usd" or repeated ID columns, remove them:
+  #select(-salary_in_usd)
 
-## 3.1 Data Exploration
+# Compute correlation matrix (pairwise complete obs in case of any missing)
+corr_mat <- cor(num_vars, use = "pairwise.complete.obs")
 
-```{r echo=FALSE, warning=FALSE}
-model_df %>% 
-  ggplot(aes(x = experience_level, y = salary_in_usd)) + 
-  geom_boxplot() + 
-  facet_wrap(~ us_resident, labeller = labeller(us_resident = c("0" = "Non-U.S. Resident", "1" = "U.S. Resident"))) + 
-  labs(title = "Salary Distribution by Experience Level",
-       x = "Experience Level",
-       y = "Salary (USD)")
+# Visualize the correlation matrix
+corrplot(corr_mat, method = "circle", tl.cex = 0.7,
+         title = "Correlation Matrix of Numeric Predictors",
+         mar = c(0,0,1,0))
+
 ```
+
 
 ## 3.2 Model Selection
 
@@ -230,7 +239,7 @@ We can use a step function from the MASS package that computes the best model pu
 library(MASS)
 
 # Fit the full model with all predictors
-full_model <- lm(salary_in_usd ~ ., data = model_df)
+full_model <- lm(salary_in_usd ~ . - salary_in_usd, data = model_df)
 
 # Perform stepwise selection using AIC (both directions)
 step_model <- stepAIC(full_model, direction = "both", trace = FALSE)
@@ -297,7 +306,7 @@ we can now run the step AIC function again using the log(salary) as our response
 
 ```{r}
 model_df$log_salary <- log(model_df$salary_in_usd)
-log_full_model <- lm(log_salary ~ ., data = model_df)
+log_full_model <- lm(log_salary ~ .- salary_in_usd, data = model_df)
 step_log_model <- stepAIC(log_full_model, direction = "both", trace = FALSE)
 summary(step_log_model)
 
@@ -335,25 +344,26 @@ print(cv_model)
 anova_result <- anova(step_log_model_interact)
 print(anova_result)
 ```
-Our log transformed model has a much higher $R^2$ indicating that our model explains a lot more of the variability in log(salary) than it does salary. Although our residual plot still shows bias and heteroscedasity, so we need to consider what other transformations we can make.
+Our log transformed model has a much higher $R^2$ indicating that our model explains a lot more of the variability in log(salary) than it does salary. Although our residual plot still heteroscedasity, so we need to consider what other transformations we can make.
 
 ```{r}
 library(MASS)
-bc <- boxcox(lm(log_salary ~ .+ experience_level:company_size, data = model_df), plotit = TRUE)
+bc <- boxcox(lm(salary_in_usd ~ -salary_in_usd, data = model_df), plotit = TRUE)
 # Choose lambda based on the plot and refit using transformed response:
 lambda_opt <- bc$x[which.max(bc$y)]
 model_df$trans_salary <- if(lambda_opt == 0) log(model_df$salary_in_usd) else (model_df$salary_in_usd^lambda_opt - 1)/lambda_opt
 
 ```
-The box cox indicates that the log transformed model is the best power model for our data, so the changes we need to make will be on indiviual predictors and not the entire data.
+The box cox indicates that the log transformed model is the best power model for our data, so the changes we need to make will be on individual predictors and not the entire data.
 
 
 ## 3.3 Modeling
+
 
 ## 3.5 Model Descriptions
 The initial model was a multiple linear regression model with categorical and numerical predictors to predict 'salary_in_usd'. We found Heteroscedasticity and non-normally distributed residuals, hence through application of log transformation to minimize AIC we can improve the model significantly.  
 
 The final model uses 'experience_level', 'job_title','employee_residence','work_setting','company_size' and an interaction term 'experience_level:company_size' as predictors to predict 'log_salary'. We can get the actual salary by taking the exponent of the log. This model assumes linear relationship, and there seems to have residual bias which suggests some possible non-linear relationships.
----
+
 
 # 4. Conclusion
