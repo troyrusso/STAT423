@@ -290,14 +290,6 @@ The cross validation tells us that our model is not over fitting since the $R^2$
 
 The residual plot shows a funnel shape, which suggests hetereoscadascity of the variance and the residuals do not appear to be centered at zero, which indicates that there is bias. The plots indicate that we may want to use the log of the salary instead of salary as our response.
 
-We can also test to make sure that there are no high leverage points, that might be skewing the values of the coefficients. To do this, we can calculate the Cook's Distance on this model, and create a plot that visualizes these distances for each point. 
-
-```{r}
-cooksd <- cooks.distance(step_model)
-
-plot(cooksd)
-```
-
 we can now run the step AIC function again using the log(salary) as our response and perform the same model diagnostic tests as above. We also add an interaction term between experience_level and company size.
 
 ```{r}
@@ -342,6 +334,31 @@ model_df$trans_salary <- if(lambda_opt == 0) log(model_df$salary_in_usd) else (m
 
 ```
 The box cox indicates that the log transformed model is the best power model for our data, so the changes we need to make will be on individual predictors and not the entire data.
+
+We can also test to make sure that there are no high leverage points, that might be skewing the values of the coefficients. To do this, we can calculate the Cook's Distance on this model, and create a plot that visualizes these distances for each point. 
+
+```{r, fig.label = "cooks-distance"}
+cooks_values <- cooks.distance(step_log_model)
+
+threshhold <- 4/length(cooks_values)
+
+barplot(cooks_values,
+        main = "Cook's Distance",
+        ylab = "Cook's Distance",
+        xlab = "Observation Index")
+abline(h = 4/7500,
+       col = "red",
+       lty = 2)
+```
+
+Considering we have 7575 observations, a good threshold is that Cook's distance values should be lower than $\frac{4}{7575}\approx 0.00053$. Visibly, we can see that there are definitely some points that exceed this threshold. When pluging this into R, we get that 457 observations have significantly high values. This suggests that a non-trivial section of the data set is having a large impact on the regression model. We can take a quick look at the points associated with these highest values to make sure there is no mismeasurement going on.
+
+```{r}
+top_5_cook <- tail(sort(cooks_values),5)
+#We get the numbers 
+model_df[c(6845,7357,6052,6800,6030),c(2,5,6,7,8)]
+```
+Notably, none of these data points are residents of the United States. It seems that instead, they are from countries with either really high or really low cost of living indexes. Their salaries, experience, job categories, and size of their companies do not seem to be the criteria that inflates the Cook's distance values.
 
 ## 2.5 Final Model Description
 
