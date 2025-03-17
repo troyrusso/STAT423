@@ -369,6 +369,7 @@ We included an interaction between **experience_level** and **company_size** to 
 - If this interaction is positive and significant, it indicates that seniority in larger companies *amplifies* the salary effect compared to small companies.
 
 ### 5. **Goodness‐of‐Fit**
+- **\(R^2\) on the log scale**: While a higher \(R^2\) indicates better explanatory power, we are primarily interested in whether major assumptions (linearity, normality of residuals) are met.
 - **RMSE or MSE** on the **log scale**: Tells us how far predictions deviate from actual \(\log(\text{salary})\). In exponentiated form, it helps gauge the typical percentage error in predictions.
 
 ### 6. **Exponentiating Predictions to Get Actual Salary**
