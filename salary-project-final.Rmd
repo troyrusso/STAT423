@@ -192,14 +192,14 @@ corrplot(corr_mat, method = "circle", tl.cex = 0.7,
 
 ```
 
-Examining our correlation matrix, we can see that the index variables are highly correlated with one another since the cost of living indices are joined by country, so there are several repeated values. To satisfy the multicollinearity assumption, we will be removing many of these highly correlated variables (only using `Cost.of.Living.Index`) for our MLR model. 
+Examining our correlation matrix, we can see that the index variables are highly correlated with one another since the cost of living indices are joined by country, so there are several repeated values. To satisfy the multicollinearity assumption, we will be removing many of these highly correlated variables (only using `Cost.of.Living.Index`) for our MLR model.
 
 ```{r echo=FALSE}
 model_df <- joined_df %>% 
-  dplyr::select(!c(employment_type, job_title, Cost.of.Living.Plus.Rent.Index, Local.Purchasing.Power.Index, Groceries.Index, Restaurant.Price.Index, Rent.Index))
+  dplyr::select(!c(employment_type, job_title, Cost.of.Living.Plus.Rent.Index, Local.Purchasing.Power.Index, Groceries.Index, Restaurant.Price.Index, Rent.Index, employee_residence, company_location))
 ```
 
-From our data processing and model diagnostics step, to avoid repeating variables, satisfy the assumptions necessary for conducting a linear model, and to consolidate the number of predictors we are using, we'll be using a dataframe with the following variables: `r names(model_df)`.
+From our data processing and model diagnostics step, to avoid repeating variables, satisfy the assumptions necessary for conducting a linear model, and to consolidate the number of predictors we are using. Varibles like `employement_type` and `job_title` are removed because they are highly correlated with new variables we mutated or existing variables. We are also removing `company_location` and `employee_residence` to simplify our model since there are a lot of different categories and most of them aren't significant to model at $\alpha = 0.05$, consolidating our model down. We'll be using a dataframe with the following variables: `r names(model_df)`.
 
 ```{r}
 set.seed(123)  # Ensure reproducibility
@@ -218,6 +218,8 @@ candidate_set <- model_df[-test_indices, ]
 ## 2.4 Model Selection
 
 To determine our model, we will fit multiple linear regression models and find the model that minimizes our **AIC (Akaike Information Criterion) and/or BIC (Bayesian Information Criterion)**. If the AIC and BIC suggest different models, we will favor the model selected by lowest AIC because BIC penalizes models with a large number of observations and tends to predict less than the AIC.
+
+
 
 We can use a step function from the MASS package that computes the best model purely based on the AIC by comparing every potential model combination and returning the model with the lowest AIC. This model may be overfit however, since AIC does not account for model complexity.
 ```{r, echo = F}
@@ -329,7 +331,7 @@ model_df$trans_salary <- if(lambda_opt == 0) log(model_df$salary_in_usd) else (m
 ```
 The box cox indicates that the log transformed model is the best power model for our data, so the changes we need to make will be on individual predictors and not the entire data.
 
-## 2.5 Model Descriptions
+## 2.5 Final Model Description
 
 After comparing multiple candidate models, our final chosen model regresses **log(salary_in_usd)** on several predictors:
 
@@ -441,7 +443,15 @@ ggplot(results_df, aes(x = actual_salary, y = predicted_salary)) +
 ```
 
 
-# 4. Conclusion
+# 4. Discussion
+
+## 4.1 Limitations
+
+The primary limitation to our study is that our data comes from self-reported surveys which could possibly hinder the accuracy of true data science and AI job salaries and resulted in many duplicates. Recognizing the many duplicates, we've removed exact duplicate observations, ensuring that each row is unique because its unlikely that two people have the exact same job description. We are also consolidating our data to US based workers vs. non-US based workers. This leads to issues because there are more US based observations in our dataset but there are still a significant number of reports outside of the US. Although almost all of the categorical predictors regarding `company_location` were considered insignificant to our model, there were still a few that were significant that we removed, which may cause slight inaccuracies to our prediction. Lastly, our Cost of Living and Job Salaries data are country-based, which isn't ideal for predicting salary because within each country, there are cities or provinces that pay higher salaries than others (NYC, San Francisco, and Seattle in the U.S.). This made our model one-dimensional since we aren't able to access which city each observation is from.
+
+## 4.2 Conclusion
+
+
 
 # Appendix
 
