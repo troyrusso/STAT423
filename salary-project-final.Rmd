@@ -163,15 +163,19 @@ ggplot(mean_salary, aes(x = experience_level, y = mean_salary, color = company_s
 
 **Correlation and Multicollinearity Analysis**
 
-One of the assumptions we are making in our model is that the predictors we are using are independent. Thus, it becomes expedient to test the multicollinearity of our predictors, to ensure that they are each independent of one another and add new information. Because a large majority of our predictors are categorical, The VIF (Variance Inflation Factor) will be most effective in calculating that multicollinearity:
+One of the assumptions we are making in our model is that the predictors we are using are independent. Thus, it becomes expedient to test the multicollinearity of our predictors, to ensure that they are each independent of one another and add new information. Because a large majority of our predictors are categorical, we can use The VIF (Variance Inflation Factor) to test the multicollinearity of those:
 
 ```{r label="vif-check", eval=TRUE, echo=FALSE}
 base_model <- lm(salary_in_usd~ experience_level + company_location+ 
-                                company_size + job_category + Rank,
+                                company_size + job_category,
                  data = joined_df)
 
 vif(base_model)
 ```
+
+With the exception of `company_location`, all of these predictors have a VIF value that is lower than 5, so we can safely say that there are no issues of multicollinearity among them. Even `company_location` has a VIF of 6.527, so while it is above the baseline of 5 that we would like to see, it is not egregious. This implies that each of these predictors adds some new information to the model and thus explains (or doesn't) its own variation, which means that we need not fear that coefficients become over or underinflated, explaining variation that should be attributed to another predictor, or having that happen to them.
+
+We are joining the cost of living dataset, which includes a number of variables that are related to cost of living metrics. We suspect that they might correlate together, being measures of the same changes in price and economy, so we can create a correlation matrix to examine any multicollinearity that may exist:
 
 ```{r label="correlation-vif", echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -199,7 +203,7 @@ model_df <- joined_df %>%
   dplyr::select(!c(employment_type, job_title, Cost.of.Living.Plus.Rent.Index, Local.Purchasing.Power.Index, Groceries.Index, Restaurant.Price.Index, Rent.Index, employee_residence, company_location))
 ```
 
-From our data processing and model diagnostics step, to avoid repeating variables, satisfy the assumptions necessary for conducting a linear model, and to consolidate the number of predictors we are using. Varibles like `employement_type` and `job_title` are removed because they are highly correlated with new variables we mutated or existing variables. We are also removing `company_location` and `employee_residence` to simplify our model since there are a lot of different categories and most of them aren't significant to model at $\alpha = 0.05$, consolidating our model down. We'll be using a dataframe with the following variables: `r names(model_df)`.
+From our data processing and model diagnostics step, to avoid repeating variables, satisfy the assumptions necessary for conducting a linear model, and to consolidate the number of predictors we are using. Variables like `employement_type` and `job_title` are removed because they are highly correlated with new variables we mutated or existing variables. We are also removing `company_location` and `employee_residence` to simplify our model since there are a lot of different categories and most of them aren't significant to model at $\alpha = 0.05$, consolidating our model down. We'll be using a dataframe with the following variables: `r names(model_df)`.
 
 ```{r}
 set.seed(123)  # Ensure reproducibility
@@ -285,6 +289,14 @@ print(anova_result)
 The cross validation tells us that our model is not over fitting since the $R^2$ is only about 35%, but also suggests that we can improve our model because the RMSE is quite high at 54993, so we may need to add more interactions or do some non linear transformations of the data.
 
 The residual plot shows a funnel shape, which suggests hetereoscadascity of the variance and the residuals do not appear to be centered at zero, which indicates that there is bias. The plots indicate that we may want to use the log of the salary instead of salary as our response.
+
+We can also test to make sure that there are no high leverage points, that might be skewing the values of the coefficients. To do this, we can calculate the Cook's Distance on this model, and create a plot that visualizes these distances for each point. 
+
+```{r}
+cooksd <- cooks.distance(step_model)
+
+plot(cooksd)
+```
 
 we can now run the step AIC function again using the log(salary) as our response and perform the same model diagnostic tests as above. We also add an interaction term between experience_level and company size.
 
