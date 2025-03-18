@@ -27,6 +27,7 @@ library(leaps)
 library(dplyr)
 library(corrplot)
 library(car)
+library(MASS)
 ```
 
 ---
@@ -43,11 +44,11 @@ library(car)
 
 ## 2.1 Data Description
 
-```{r include=FALSE}
+```{r echo=F}
 job_data <- read.csv("jobs_in_data_2024.csv")
 
 job_data <- job_data %>% 
-  select(!c(work_year, salary_currency, salary))
+  dplyr::select(!c(work_year, salary_currency, salary))
 
 cost_of_living <- read.csv("cost_of_living_2024.csv")
 
@@ -69,7 +70,7 @@ Mutations in the data were also made to create new predictors `us_resident` whic
 
 We are also reordering values to ensure that our **baseline term** is what we want it to be (i.e. releveling small companies to be the first type and entry-level jobs to be the first job types). 
 
-```{r echo=FALSE}
+```{r label="data-manipulation", echo=FALSE}
 # changing categorical to as.factor
 job_data <- job_data %>%
   mutate(across(where(is.character), as.factor))
@@ -133,7 +134,7 @@ The model that we are using seems highly categorical, even after our data transf
 
 The residuals when using a non-transformed model is skewed due to the deviations within the tails in our qq-plot, to fix this issue, we would have to use a **log-transformation** on the data. The variance of the residuals is also constant and there is a clear linear and positive relationship between the predictor and response.
 
-```{r message=FALSE, echo=FALSE, fig.width=5, fig.height=3, fig.align='center', fig.cap='Normality check for Experience and Cost of Living Index Interaction variable on Salary, comparison between no transformation and log-transformation'}
+```{r message=FALSE, echo=FALSE, fig.width=5, fig.height=3, fig.align='center', fig.cap='Normality check for Experience and Cost of Living Index Interaction variable on Salary, comparison between no transformation and log-transformation', label="normality-check-1"}
 # mutating data to create interaction term
 joined_df <- joined_df %>% 
   mutate(exp_cost_int = experience_numeric * Cost.of.Living.Index)
@@ -148,7 +149,7 @@ par(mfrow = c(1, 1))
 
 To test the assumptions for our categorical variables we must look at the average salary by category, to see if there is a clear trend between the different experience levels in respective company size. This checks off the linearity assumption because there is a (somewhat) linear increasing trend for all the experience levels. We can see that we don't need an interaction effect between `experience_level` and `company_size` because the trend is increasing for each company size at around the same rate. We can test this using an ANOVA test at $\alpha = 0.05$ to see if adding an interaction term effects the model.
 
-```{r message=FALSE, echo=FALSE, fig.width=5, fig.height=3, fig.align='center', fig.cap='Interaction between Experience Level and Company Size on Salary'}
+```{r message=FALSE, echo=FALSE, fig.width=5, fig.height=3, fig.align='center', fig.cap='Interaction between Experience Level and Company Size on Salary', label="interaction-check-1"}
 mean_salary <- joined_df %>%
   group_by(experience_level, company_size) %>%
   summarize(mean_salary = mean(salary_in_usd))
@@ -160,44 +161,30 @@ ggplot(mean_salary, aes(x = experience_level, y = mean_salary, color = company_s
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
+<<<<<<< HEAD
 ```{r include=FALSE}
 library(dplyr)
 model_df <- joined_df %>% 
   select(!c(employment_type, work_setting, job_title, Cost.of.Living.Plus.Rent.Index, Local.Purchasing.Power.Index, Groceries.Index, Restaurant.Price.Index))
+=======
+**Correlation and Multicollinearity Analysis**
+>>>>>>> 9482a434801c149821186891c4a9de36c59f96a8
 
-set.seed(123)  # Ensure reproducibility
+One of the assumptions we are making in our model is that the predictors we are using are independent. Thus, it becomes expedient to test the multicollinearity of our predictors, to ensure that they are each independent of one another and add new information. Because a large majority of our predictors are categorical, we can use The VIF (Variance Inflation Factor) to test the multicollinearity of those:
 
-# Calculate the total number of rows in model_df
-n <- nrow(model_df)
-
-# Randomly sample indices for the 20% test set
-test_indices <- sample(seq_len(n), size = floor(0.2 * n))
-
-# Create the test set and candidate (training) set
-test_set <- model_df[test_indices, ]
-candidate_set <- model_df[-test_indices, ]
-
-```
-One of the assumptions we are making in our model is that the predictors we are using are independent. Thus, it becomes expedient to test the multicollinearity of our predictors, to ensure that they are each independent of one another and add new information. Because a large majority of our predictors are categorical, The VIF (Variance Inflation Factor) will be most effective in calculating that multicollinearity:
-
-```{r}
-
+```{r label="vif-check", eval=TRUE, echo=FALSE}
 base_model <- lm(salary_in_usd~ experience_level + company_location+ 
-                                company_size + job_category + Rank,
-                 data = model_df)
+                                company_size + job_category,
+                 data = joined_df)
 
 vif(base_model)
 ```
 
-```{r echo=FALSE}
-fit1 <- lm(salary_in_usd ~ experience_level + company_size, data=model_df)
-fit2 <- lm(salary_in_usd ~ experience_level * company_size, data=model_df)
-anova(fit1, fit2)
-```
-As we can see from the ANOVA test, our the p-value of 0.3008 is much higher than our $\alpha = 0.05$, therefore, the addition of an interaction isn't impactful to our linear model.
+With the exception of `company_location`, all of these predictors have a VIF value that is lower than 5, so we can safely say that there are no issues of multicollinearity among them. Even `company_location` has a VIF of 6.527, so while it is above the baseline of 5 that we would like to see, it is not egregious. This implies that each of these predictors adds some new information to the model and thus explains (or doesn't) its own variation, which means that we need not fear that coefficients become over or underinflated, explaining variation that should be attributed to another predictor, or having that happen to them.
 
-### 2.4 Correlation and Multicollinearity Analysis
-```{r correlation-vif, echo=FALSE, warning=FALSE, message=FALSE}
+We are joining the cost of living dataset, which includes a number of variables that are related to cost of living metrics. We suspect that they might correlate together, being measures of the same changes in price and economy, so we can create a correlation matrix to examine any multicollinearity that may exist:
+
+```{r label="correlation-vif", echo=FALSE, warning=FALSE, message=FALSE}
 
 # 1. Correlation Matrix ---------------------------------------------
 # Select numeric columns only (excluding the response itself if needed)
@@ -216,14 +203,35 @@ corrplot(corr_mat, method = "circle", tl.cex = 0.7,
 
 ```
 
+Examining our correlation matrix, we can see that the index variables are highly correlated with one another since the cost of living indices are joined by country, so there are several repeated values. To satisfy the multicollinearity assumption, we will be removing many of these highly correlated variables (only using `Cost.of.Living.Index`) for our MLR model.
 
-## 3.2 Model Selection
+```{r echo=FALSE}
+model_df <- joined_df %>% 
+  dplyr::select(!c(employment_type, job_title, Cost.of.Living.Plus.Rent.Index, Local.Purchasing.Power.Index, Groceries.Index, Restaurant.Price.Index, Rent.Index, employee_residence, company_location))
+```
+
+From our data processing and model diagnostics step, to avoid repeating variables, satisfy the assumptions necessary for conducting a linear model, and to consolidate the number of predictors we are using. Variables like `employement_type` and `job_title` are removed because they are highly correlated with new variables we mutated or existing variables. We are also removing `company_location` and `employee_residence` to simplify our model since there are a lot of different categories and most of them aren't significant to model at $\alpha = 0.05$, consolidating our model down. We'll be using a dataframe with the following variables: `r names(model_df)`.
+
+```{r}
+set.seed(123)  # Ensure reproducibility
+
+# Calculate the total number of rows in model_df
+n <- nrow(model_df)
+
+# Randomly sample indices for the 20% test set
+test_indices <- sample(seq_len(n), size = floor(0.2 * n))
+
+# Create the test set and candidate (training) set
+test_set <- model_df[test_indices, ]
+candidate_set <- model_df[-test_indices, ]
+```
+
+## 2.4 Model Selection
 
 To determine our model, we will fit multiple linear regression models and find the model that minimizes our **AIC (Akaike Information Criterion) and/or BIC (Bayesian Information Criterion)**. If the AIC and BIC suggest different models, we will favor the model selected by lowest AIC because BIC penalizes models with a large number of observations and tends to predict less than the AIC.
 
-```{r echo=FALSE}
-fit <- regsubsets(log(salary_in_usd) ~ experience_numeric + us_resident + log(exp_cost_int) + Rank + company_size + job_category, data = model_df, really.big=T)
 
+<<<<<<< HEAD
 summary_fit <- summary(fit)
 
  #which.min(summary(fit)$bic)
@@ -241,11 +249,11 @@ aic_values <- n * log(rss / n) + 2 * k
 ```
 
 The AIC, BIC, CP, and Adjusted $R^2$, all tells me that `experience numeric`, `us_resident`, `Rank`, `company_size`, and `job_category` 
+=======
+>>>>>>> 9482a434801c149821186891c4a9de36c59f96a8
 
 We can use a step function from the MASS package that computes the best model purely based on the AIC by comparing every potential model combination and returning the model with the lowest AIC. This model may be overfit however, since AIC does not account for model complexity.
 ```{r, echo = F}
-# Load the MASS package for stepAIC
-library(MASS)
 
 # Fit the full model with all predictors
 full_model <- lm(salary_in_usd ~ . - salary_in_usd, data = model_df)
@@ -255,8 +263,6 @@ step_model <- stepAIC(full_model, direction = "both", trace = FALSE)
 
 # Display the summary of the selected model
 summary(step_model)
-
-
 ```
 Now that we have the model that we have found from AIC we can test the assumptions of the model as well as performing cross validation to test the valididity of the model. We can also perform an anova test to see if our predictors are significant.
 ```{r}
@@ -348,7 +354,6 @@ print(anova_result)
 Our log transformed model has a much higher $R^2$ indicating that our model explains a lot more of the variability in log(salary) than it does salary. Although our residual plot still heteroscedasity, so we need to consider what other transformations we can make.
 
 ```{r}
-library(MASS)
 bc <- boxcox(lm(salary_in_usd ~ -salary_in_usd, data = model_df), plotit = TRUE)
 # Choose lambda based on the plot and refit using transformed response:
 lambda_opt <- bc$x[which.max(bc$y)]
@@ -357,15 +362,37 @@ model_df$trans_salary <- if(lambda_opt == 0) log(model_df$salary_in_usd) else (m
 ```
 The box cox indicates that the log transformed model is the best power model for our data, so the changes we need to make will be on individual predictors and not the entire data.
 
+We can also test to make sure that there are no high leverage points, that might be skewing the values of the coefficients. To do this, we can calculate the Cook's Distance on this model, and create a plot that visualizes these distances for each point. 
 
-## 3.3 Modeling
+```{r, fig.label = "cooks-distance"}
+cooks_values <- cooks.distance(step_log_model)
 
+threshhold <- 4/length(cooks_values)
 
-## 3.5 Model Descriptions
+barplot(cooks_values,
+        main = "Cook's Distance",
+        ylab = "Cook's Distance",
+        xlab = "Observation Index")
+abline(h = 4/7500,
+       col = "red",
+       lty = 2)
+```
+
+Considering we have 7575 observations, a good threshold is that Cook's distance values should be lower than $\frac{4}{7575}\approx 0.00053$. Visibly, we can see that there are definitely some points that exceed this threshold. When pluging this into R, we get that 457 observations have significantly high values. This suggests that a non-trivial section of the data set is having a large impact on the regression model. We can take a quick look at the points associated with these highest values to make sure there is no mismeasurement going on.
+
+```{r}
+top_5_cook <- tail(sort(cooks_values),5)
+#We get the numbers 
+model_df[c(6845,7357,6052,6800,6030),c(2,5,6,7,8)]
+```
+Notably, none of these data points are residents of the United States. It seems that instead, they are from countries with either really high or really low cost of living indexes. Their salaries, experience, job categories, and size of their companies do not seem to be the criteria that inflates the Cook's distance values.
+
+## 2.5 Final Model Description
 
 After comparing multiple candidate models, our final chosen model regresses **log(salary_in_usd)** on several predictors:
 
 \[
+<<<<<<< HEAD
 \log(\text{salary}_{\text{usd}}) = \beta_0 
 + \beta_1\,\text{experience\_level} 
 + \beta_2\,\text{job\_title} 
@@ -373,6 +400,16 @@ After comparing multiple candidate models, our final chosen model regresses **lo
 + \beta_4\,\text{work\_setting}
 + \beta_5\,\text{company\_size}
 + \beta_6\,(\text{experience\_level} \cdot \text{company\_size})
+=======
+\log(\text{salary\_in\_usd}) =
+\beta_0 
++ \beta_1 \cdot \text{experience\_level} 
++ \beta_2 \cdot \text{job\_title} 
++ \beta_3 \cdot \text{employee\_residence}
++ \beta_4 \cdot \text{work\_setting}
++ \beta_5 \cdot \text{company\_size}
++ \beta_6 \cdot (\text{experience\_level} \times \text{company\_size})
+>>>>>>> 9482a434801c149821186891c4a9de36c59f96a8
 + \cdots
 \]
 
@@ -401,6 +438,7 @@ We included an interaction between **experience_level** and **company_size** to 
 - If this interaction is positive and significant, it indicates that seniority in larger companies *amplifies* the salary effect compared to small companies.
 
 ### 5. **Goodness‐of‐Fit**
+- **\(R^2\) on the log scale**: While a higher \(R^2\) indicates better explanatory power, we are primarily interested in whether major assumptions (linearity, normality of residuals) are met.
 - **RMSE or MSE** on the **log scale**: Tells us how far predictions deviate from actual \(\log(\text{salary})\). In exponentiated form, it helps gauge the typical percentage error in predictions.
 
 ### 6. **Exponentiating Predictions to Get Actual Salary**
@@ -419,7 +457,7 @@ Any confidence or prediction intervals on the log scale can similarly be exponen
 
 
 
-# 3.6 Results
+# 3 Testing and Results
 
 ```{r test-set-results, echo=FALSE}
 # 1. Fit the final model on the "candidate_set"
@@ -457,8 +495,6 @@ cat(" - RMSE (USD):", round(test_rmse_salary, 2), "\n")
 
 
 ```{r test-set-plot, echo=FALSE, fig.width=5, fig.height=4}
-library(ggplot2)
-
 results_df <- data.frame(
   actual_salary = test_set$salary_in_usd,
   predicted_salary = test_predictions_salary
@@ -474,5 +510,43 @@ ggplot(results_df, aes(x = actual_salary, y = predicted_salary)) +
 ```
 
 
-# 4. Conclusion
+# 4. Discussion
 
+## 4.1 Limitations
+
+The primary limitation to our study is that our data comes from self-reported surveys which could possibly hinder the accuracy of true data science and AI job salaries and resulted in many duplicates. Recognizing the many duplicates, we've removed exact duplicate observations, ensuring that each row is unique because its unlikely that two people have the exact same job description. We are also consolidating our data to US based workers vs. non-US based workers. This leads to issues because there are more US based observations in our dataset but there are still a significant number of reports outside of the US. Although almost all of the categorical predictors regarding `company_location` were considered insignificant to our model, there were still a few that were significant that we removed, which may cause slight inaccuracies to our prediction. Lastly, our Cost of Living and Job Salaries data are country-based, which isn't ideal for predicting salary because within each country, there are cities or provinces that pay higher salaries than others (NYC, San Francisco, and Seattle in the U.S.). This made our model one-dimensional since we aren't able to access which city each observation is from.
+
+## 4.2 Conclusion
+
+
+
+# Appendix
+
+Data Manipulation Process:
+
+```{r ref.label="data-manipulation", eval=FALSE}
+```
+
+Normality check in section 2
+
+```{r ref.label="normality-check-1", eval=FALSE}
+
+```
+
+Checking if interactions are necessary
+
+```{r ref.label="interaction-check-1", eval=FALSE}
+
+```
+
+VIF check
+
+```{r ref.label="vif-check", eval=FALSE}
+
+```
+
+Correlation Matrix:
+
+```{r ref.label="correlation-vif", eval=FALSE}
+
+```
