@@ -34,7 +34,7 @@ library(MASS)
 
 # 1. Introduction
 
-**Description:** The job market can be a hard place to navigate, especially with the search of data roles in the recent years. As statistics students, many of us are leaning towards opportunities within data roles. To understand the recent market we will be analyzing data job logistics to investigate the factors and predictors that most impacts the salary of these roles. Within this report, we will be using Salary Index data reported by real people in the industry to (1) discover the factors and variables within the job description that may influence a person's job salary the most to help students like us navigate the market and (2) if there's a difference between the criterion (AIC and BIC), we will split our data into training and testing data to compare the two models optimized by the criterion, if not, we will still split the data to test the our optimized model.
+**Description:** The job market can be a hard place to navigate, especially with the search of data roles in the recent years. As statistics students, many of us are leaning towards opportunities within data roles. To understand the recent market we will be analyzing data job logistics to investigate the factors and predictors that most impact the salary of these roles. Within this report, we will be using Salary Index data reported by real people in the industry to (1) discover the factors and variables within the job description that may influence a person's job salary the most to help students like us navigate the market and (2) analyze the difference between the model selection criterion (AIC and BIC), by splitting our data into training and testing data to compare the two optimized models. If the two criterion generate the same model, we will still split the data to test our optimized model.
 
 **Disclaimer:** We have pivoted from using this dataset https://www.kaggle.com/datasets/uom190346a/ai-powered-job-market-insights which is comprised of synthetic data based off the current job market regarding AI jobs to this dataset https://www.kaggle.com/datasets/murilozangari/jobs-and-salaries-in-data-field-2024/data which consists of real survey data from various people in data roles, reporting through this website https://aijobs.net/salaries/2024/. We decided to make this change because we believe that variables such as `experience_level` and `job_category` which can be found in our current dataset would be strong predictors for `salary`. We also believe that using real survey data as supposed to synthetic data would give us results that are more related to real-life circumstances, making the report more applicable for all.
 
@@ -58,7 +58,7 @@ cost_of_living <- cost_of_living %>%
 
 The first dataset was collected through https://aijobs.net/salaries/2024/, it consists of 14199 different observations, with each observation representing a person in their role in 2024. The **response variable** we are measuring is `salary_in_usd` which measures a person's annual gross salary. The **8 predictors** are `experience_level`, `employment_type`, `job_title`, `employee_residence`, `work_setting`, `company_location`, `company_size`, `job_category`. All of these variables are categorical where `company_size` is categorized as *S* for small, *M* for medium, and *L* for large.
 
-The second dataset consists of cost of living index by country where an index of 100 represents the living cost of NYC, United States, so all the indices are relative to that. We will merge the two datasets by `country`. The predictors we're looking at in this dataset are Cost of Living Index, Rent Index, Cost of Living Plus Rent Index, and Local Purchasing Power Index. We believe that the cost of living could be indicative of `salary_usd`.
+The second dataset consists of cost of living index by country where an index of 100 represents the living cost of NYC, United States, with all indices relative to that value. We will merge the two datasets by `country`. The predictors we're looking at in this dataset are Cost of Living Index, Rent Index, Cost of Living Plus Rent Index, and Local Purchasing Power Index. We believe that the cost of living could be indicative of `salary_usd`.
 
 ## 2.2 Data Processing
 
@@ -229,10 +229,7 @@ candidate_set <- model_df[-test_indices, ]
 
 To determine our model, we will fit multiple linear regression models and find the model that minimizes our **AIC (Akaike Information Criterion) and/or BIC (Bayesian Information Criterion)**. If the AIC and BIC suggest different models, we will favor the model selected by lowest AIC because BIC penalizes models with a large number of observations and tends to predict less than the AIC.
 
-
-
 The AIC, BIC, CP, and Adjusted $R^2$, all tells me that `experience numeric`, `us_resident`, `Rank`, `company_size`, and `job_category` 
-
 
 We can use a step function from the MASS package that computes the best model purely based on the AIC by comparing every potential model combination and returning the model with the lowest AIC. This model may be overfit however, since AIC does not account for model complexity.
 ```{r, echo = T}
@@ -359,7 +356,7 @@ top_5_cook <- tail(sort(cooks_values),5)
 #We get the numbers 
 model_df[c(6845,7357,6052,6800,6030),c(2,5,6,7,8)]
 ```
-Upon further analysis, it appears that the `Rank` predictor significantly increases the Cook's distance of high-leverage points. Removing this predictor from our model, we decrease the Cook's distances across the board, resulting in 84 fewer high-leverage points. We are working with a very large data set, so the fact that we still have some high-leverage points, while not ideal, isn't too concerning.
+Upon further analysis, it appears that the `Rank` predictor significantly increases the Cook's distance of high-leverage points. Removing this predictor from our model, we decrease the Cook's distances across the board, resulting in 84 fewer high-leverage points. While it is not ideal that we still have a significant number of high-leverage points, we are working with a very large data set, so it isn't too concerning.
 
 ## 2.5 Final Model Description
 
