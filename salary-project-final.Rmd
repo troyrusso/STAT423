@@ -334,6 +334,56 @@ model_df$trans_salary <- if(lambda_opt == 0) log(model_df$salary_in_usd) else (m
 ```
 The box cox indicates that the log transformed model is the best power model for our data, so the changes we need to make will be on individual predictors and not the entire data.
 
+One way to verify that this model is the optimal choice of predictors it to explore which predictors would be selected by the BIC and Cp criteria, and analyze any differences that exist.
+```{r, echo=F, message=F, results='hide', fig.height=3,fig.width=4}
+subsets <- regsubsets(data = model_df,
+                      x = log(salary_in_usd)~.,
+                      y = salary_in_usd,
+                      nbest =1,
+                      nvmax =16)
+aic <- numeric(17)
+for(i in 1:17){
+  aic[i] = summary(subsets)$bic[i] + 2*i -i*log(7575) + 1000
+}
+cp_model <- which(summary(subsets)$cp == min(summary(subsets)$cp))
+bic_model <- which(summary(subsets)$bic == min(summary(subsets)$bic))
+
+df_model_selection <- data.frame(Criteria = c(rep("BIC",17),rep("Cp",17),rep("AIC+1000",17)),
+                                 nv = c(1:17,1:17,1:17),
+                                 val = c(summary(subsets)$bic,
+                                         summary(subsets)$cp,
+                                         aic))
+
+ggplot(data = df_model_selection,
+       mapping = aes(x = nv,
+                     y = val,
+                     color = Criteria))+
+  geom_point()+
+  theme_bw()+
+  labs(title = "Criterion Values for AIC, BIC and Cp Optimization",
+       x = "Number of Variables in Model",
+       y = "Criterion Value")+
+  geom_segment(x = 15,
+               xend = 15,
+               y = -4000,
+               yend = -3000,
+               color = "green",
+               linetype = 2)+
+  geom_segment(x = 16,
+               xend = 16,
+               y = 0,
+               yend = 1000,
+               color = "blue",
+               linetype = 2)+
+  geom_segment(x=16,
+               xend = 16,
+               y = -3000,
+               yend = -2000,
+               color = "red",
+               linetype = 2)
+```
+The BIC criterion minimizes at 15 predictors, while the Cp and AIC criteria minimize at 16 predictors. We expect the BIC to minimize at a lower amount of predictors than the rest, but the fact that it is so close, alongside the fact that the Cp criteria minimizes at the same point as our AIC model, is a good indication that our model is optimal. 
+
 We can also test to make sure that there are no high leverage points, that might be skewing the values of the coefficients. To do this, we can calculate the Cook's Distance on this model, and create a plot that visualizes these distances for each point. 
 
 ```{r, fig.label = "cooks-distance-and-leverage", echo = FALSE, fig.width=6, fig.height=3, fig.align= 'center'}
