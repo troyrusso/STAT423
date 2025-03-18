@@ -32,7 +32,7 @@ library(MASS)
 
 ---
 
-# 1. Introduction
+# 1. Introduction (Justin)
 
 **Description:** The job market can be a hard place to navigate, especially with the search of data roles in the recent years. As statistics students, many of us are leaning towards opportunities within data roles. To understand the recent market we will be analyzing data job logistics to investigate the factors and predictors that most impact the salary of these roles. Within this report, we will be using Salary Index data reported by real people in the industry to (1) What predictors are the best for optimizing our model to predict salaries. We will discover the factors and variables within the job description that may influence a person's job salary the most to help students like us navigate the market (optimize using the AIC). (2) Based off our optimized model, how well does this predict the actual job salaries in the dataset? We will do this by splitting our data into training (80%) and testing (20%) data to test the final model.
 
@@ -42,7 +42,7 @@ library(MASS)
 
 # 2. Methods
 
-## 2.1 Data Description
+## 2.1 Data Description (Justin)
 
 ```{r echo=F}
 job_data <- read.csv("jobs_in_data_2024.csv")
@@ -60,7 +60,7 @@ The first dataset was collected through https://aijobs.net/salaries/2024/, it co
 
 The second dataset consists of cost of living index by country where an index of 100 represents the living cost of NYC, United States, with all indices relative to that value. We will merge the two datasets by `country`. The predictors we're looking at in this dataset are Cost of Living Index, Rent Index, Cost of Living Plus Rent Index, and Local Purchasing Power Index. We believe that the cost of living could be indicative of `salary_usd`.
 
-## 2.2 Data Processing
+## 2.2 Data Processing (Justin and Jian)
 
 The primary dataset will be comprised of the two datasets described in (2.1). We are joining the two datasets on `employee_residence` which is in form of country. Now each row will consist of a specified job description along with the cost indexes for each respective resident. Having all of these predictors in one dataset will allow us to utilize the lm() function to uncover linear trends for all predictor variables in response to `salary`. It will also allow us to compare models easily which we will do using ANOVA tests and by calculating the F-statistic. The primary dataset consists of 14199 observations after joining
 
@@ -117,7 +117,7 @@ joined_df <- joined_df %>%
   distinct()
 ```
 
-## 2.3 Model Diagnostics
+## 2.3 Model Diagnostics (Justin and Jian)
 
 **Linear Modeling Assumptions**:
 
@@ -416,7 +416,7 @@ model_df[c(6845,7357,6052,6800,6030),c(2,5,6,7,8)]
 
 Upon further analysis, it appears that the `Rank` predictor significantly increases the Cook's distance of high-leverage points. Removing this predictor from our model, we decrease the Cook's distances across the board, resulting in 84 fewer high-leverage points. While it is not ideal that we still have a significant number of high-leverage points, we are working with a very large data set, so it isn't too concerning.
 
-## 2.5 Final Model Description (Troy and ---)
+## 2.5 Final Model Description (Troy, Conan, Isaac)
 
 After comparing multiple candidate models, our final chosen model regresses **log(salary_in_usd)** on several predictors:
   
@@ -525,7 +525,7 @@ The scatter plot of predicted salaries (y-axis) versus actual salaries (x-axis) 
   
 # 4. Discussion
 
-## 4.1 Limitations
+## 4.1 Limitations (Justin)
 
 The primary limitation to our study is that our data comes from self-reported surveys which could possibly hinder the accuracy of true data science and AI job salaries and resulted in many duplicates. Recognizing the many duplicates, we've removed exact duplicate observations, ensuring that each row is unique because its unlikely that two people have the exact same job description. We are also consolidating our data to US based workers vs. non-US based workers. This leads to issues because there are more US based observations in our dataset but there are still a significant number of reports outside of the US. Although almost all of the categorical predictors regarding `company_location` were considered insignificant to our model, there were still a few that were significant that we removed, which may cause slight inaccuracies to our prediction. Lastly, our Cost of Living and Job Salaries data are country-based, which isn't ideal for predicting salary because within each country, there are cities or provinces that pay higher salaries than others (NYC, San Francisco, and Seattle in the U.S.). This made our model one-dimensional since we aren't able to access which city each observation is from.
 
