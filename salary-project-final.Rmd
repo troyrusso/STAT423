@@ -366,15 +366,16 @@ The box cox indicates that the log transformed model is the best power model for
 After comparing multiple candidate models, our final chosen model regresses **log(salary_in_usd)** on several predictors:
 
 \[
-\log(\text{salary_in_usd}) \;=\; \beta_0 
-\;+\; \beta_1\,(\text{experience\_level}) 
-\;+\; \beta_2\,(\text{job\_title}) 
-\;+\; \beta_3\,(\text{employee\_residence})
-\;+\; \beta_4\,(\text{work\_setting})
-\;+\; \beta_5\,(\text{company\_size})
-\;+\; \beta_6\,(\text{experience\_level}\,\times\,\text{company\_size})
-\;+\;\cdots
+\log(\text{salary}_{\text{usd}}) = \beta_0 
++ \beta_1\,\text{experience\_level} 
++ \beta_2\,\text{job\_title} 
++ \beta_3\,\text{employee\_residence}
++ \beta_4\,\text{work\_setting}
++ \beta_5\,\text{company\_size}
++ \beta_6\,(\text{experience\_level} \cdot \text{company\_size})
++ \cdots
 \]
+
 
 ### 1. **Log Transformation**
 We transformed the salary to \(\log(\text{salary\_usd})\) to address heteroscedasticity and non‐normal residuals discovered in the initial model. Interpreting coefficients on the log‐scale means that each unit increase in a predictor corresponds to a *multiplicative* change in salary, rather than an additive one. For example:
