@@ -278,8 +278,9 @@ kable(cv_results, caption = "10-fold Cross-Validation Results")
 
 # 3. anova
 anova_result <- anova(step_model)
+kable(anova_result, caption = "anova test")
 ```
-The cross validation tells us that our model is not over fitting since the $R^2$ is only about 35%, but also suggests that we can improve our model because the RMSE is quite high at 54993, so we may need to add more interactions or do some non linear transformations of the data.
+The cross validation tells us that our model is not over fitting since the $R^2$ is only about 35%, but also suggests that we can improve our model because the RMSE is quite high at 54993, so we may need to add more interactions or do some non linear transformations of the data. Additionally, the anova test suggests that our predictors are significant.
 
 The residual plot shows a funnel shape, which suggests hetereoscadascity of the variance and the residuals do not appear to be centered at zero, which indicates that there is bias. The plots indicate that we may want to use the log of the salary instead of salary as our response.
 
@@ -423,6 +424,7 @@ test_mse_log <- mean((log(test_set$salary_in_usd) - test_predictions_log)^2)
 
 #    (b) RMSE on the log scale
 test_rmse_log <- sqrt(test_mse_log)
+test_rmse_log
 
 #    (c) Convert predictions from log-salary to salary
 test_predictions_salary <- exp(test_predictions_log)
@@ -430,6 +432,7 @@ test_predictions_salary <- exp(test_predictions_log)
 #    (d) MSE on the *original* salary scale
 test_mse_salary <- mean((test_set$salary_in_usd - test_predictions_salary)^2)
 test_rmse_salary <- sqrt(test_mse_salary)
+test_rmse_salary
 ```
 
 \begin{table}[h]
@@ -440,9 +443,9 @@ test_rmse_salary <- sqrt(test_mse_salary)
         \hline
         \textbf{Metric} & \textbf{Value} \\
         \hline
-        Log-Scale RMSE & 0.3987 \\
+        Log-Scale RMSE & 0.4008 \\
         \hline
-        Original Salary RMSE & 59,761.05 \\
+        Original Salary RMSE & 59,804.53 \\
         \hline
     \end{tabular}
 \end{table}
