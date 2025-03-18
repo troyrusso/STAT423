@@ -147,7 +147,7 @@ title("Log-Transformation")
 par(mfrow = c(1, 1))  
 ```
 
-To test the assumptions for our categorical variables we must look at the average salary by category, to see if there is a clear trend between the different experience levels in respective company size. This checks off the linearity assumption because there is a (somewhat) linear increasing trend for all the experience levels. We can see that we don't need an interaction effect between `experience_level` and `company_size` because the trend is increasing for each company size at around the same rate. We can test this using an ANOVA test at $\alpha = 0.05$ to see if adding an interaction term effects the model.
+To test the assumptions for our categorical variables we must look at the average salary by category, to see if there is a clear trend between the different experience levels in respective company size. This checks off the linearity assumption because there is a (somewhat) linear increasing trend for all the experience levels. We may explore an interaction term between `company_size` and `experience_level` because it seems like the trend for each `company_size` is increasing but at a different rate.
 
 ```{r message=FALSE, echo=FALSE, fig.width=4, fig.height=3, fig.align='center', fig.cap='Interaction between Experience Level and Company Size on Salary', label="interaction-check-1"}
 mean_salary <- joined_df %>%
@@ -157,7 +157,7 @@ mean_salary <- joined_df %>%
 ggplot(mean_salary, aes(x = experience_level, y = mean_salary, color = company_size, group = company_size)) +
   geom_point(size = 3) +
   geom_line() +
-  labs(title = "Mean Salary by Experience Level and Company Size") +
+  labs(title = "Mean Salary by Exp. and Company Size") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
@@ -322,6 +322,8 @@ bp_test <- bptest(step_log_model_interact)  # p-value < 0.05 indicates potential
 
 anova_result <- anova(step_log_model_interact)
 ```
+
+
 Our **log-transformed model** achieves a notably higher $R^2$, indicating it explains more variability in \(\log(\text{salary})\) than the untransformed model. However, the residual plot still exhibits heteroscedasticity, suggesting that further transformations or alternative modeling approaches may be necessary.
 
 ```{r, echo = FALSE, fig.width=4, fig.height=2.5, fig.align= 'center'}
@@ -354,11 +356,13 @@ plot(step_log_model, which = 5)
 
 Considering we have 7575 observations, a good threshold is that Cook's distance values should be lower than $\frac{4}{7575}\approx 0.00053$. Visibly, we can see that there are definitely some points that exceed this threshold, especially through the residual vs leverage plot there are some data points that apparently have high leverage. When plugging this into R, we get that 457 observations have significantly high values. This suggests that a non-trivial section of the data set is having a large impact on the regression model. We can take a quick look at the points associated with these highest values to make sure there is no mismeasurement going on.
 
+
 ```{r, echo = FALSE}
 top_5_cook <- tail(sort(cooks_values),5)
 #We get the numbers 
 model_df[c(6845,7357,6052,6800,6030),c(2,5,6,7,8)]
 ```
+
 Upon further analysis, it appears that the `Rank` predictor significantly increases the Cook's distance of high-leverage points. Removing this predictor from our model, we decrease the Cook's distances across the board, resulting in 84 fewer high-leverage points. While it is not ideal that we still have a significant number of high-leverage points, we are working with a very large data set, so it isn't too concerning.
 
 ## 2.5 Final Model Description
@@ -369,7 +373,7 @@ After comparing multiple candidate models, our final chosen model regresses **lo
 \log(\text{salary\_in\_usd}) &= 
 \beta_0 
 + \beta_1 \cdot \text{experience\_level} \notag \\
-&\quad + \beta_2 \cdot \text{job\_title} 
+&\quad + \beta_2 \cdot \text{job\_category} 
 + \beta_3 \cdot \text{employee\_residence} \notag \\
 &\quad + \beta_4 \cdot \text{work\_setting} 
 + \beta_5 \cdot \text{company\_size} \notag \\
@@ -386,7 +390,7 @@ We transformed the salary to \(\log(\text{salary\_usd})\) to address heterosceda
 Based on the final model summary (not shown here in detail), we typically see the following patterns:
 - **experience_level**: Highly significant, with more senior roles (e.g., “Senior,” “Executive”) associated with higher \(\log(\text{salary})\). This implies strong upward salary trends as experience grows.
 - **company_size**: Medium or large companies might pay more, on average, than small companies—but the magnitude and significance can vary by the data.
-- **job_title**: Certain roles (e.g., “Data Scientist,” “Machine Learning”) often command higher salaries relative to baseline roles.
+- **job_category**: Certain roles (e.g., “Data Scientist,” “Machine Learning”) often command higher salaries relative to baseline roles.
 - **employee_residence**: Countries or regions with different cost‐of‐living indices can have substantially different salary norms.
 - **work_setting**: If “Remote” vs. “In‐Office” or other setups are included, each may show a different average salary level.
 
@@ -425,7 +429,7 @@ test_rmse_salary <- sqrt(test_mse_salary)
         \hline
         \textbf{Metric} & \textbf{Value} \\
         \hline
-        Log-Scale RMSE & 0.1589 \\
+        Log-Scale RMSE & 0.3987 \\
         \hline
         Original Salary RMSE & 59,761.05 \\
         \hline
@@ -433,9 +437,8 @@ test_rmse_salary <- sqrt(test_mse_salary)
 \end{table}
 
 
+
 Our final model exhibits an RMSE of approximately 0.4 in log-scale, which translates to substantial error when converted back to the original salary scale. Specifically, the RMSE in USD is $59,761.05, which is about 0.4 times the median salary in our dataset. While this indicates that our model captures general salary trends, the remaining variability suggests inherent limitations in the available data, such as unobserved factors influencing salary that our model cannot account for.
-
-
 
 
 ```{r test-set-plot, echo=FALSE, fig.width=4, fig.height=3, fig.align= 'center'}
@@ -462,40 +465,5 @@ The scatter plot of predicted salaries (y-axis) versus actual salaries (x-axis) 
 The primary limitation to our study is that our data comes from self-reported surveys which could possibly hinder the accuracy of true data science and AI job salaries and resulted in many duplicates. Recognizing the many duplicates, we've removed exact duplicate observations, ensuring that each row is unique because its unlikely that two people have the exact same job description. We are also consolidating our data to US based workers vs. non-US based workers. This leads to issues because there are more US based observations in our dataset but there are still a significant number of reports outside of the US. Although almost all of the categorical predictors regarding `company_location` were considered insignificant to our model, there were still a few that were significant that we removed, which may cause slight inaccuracies to our prediction. Lastly, our Cost of Living and Job Salaries data are country-based, which isn't ideal for predicting salary because within each country, there are cities or provinces that pay higher salaries than others (NYC, San Francisco, and Seattle in the U.S.). This made our model one-dimensional since we aren't able to access which city each observation is from.
 
 ## 4.2 Conclusion
-<<<<<<< HEAD
-In this study, we explored some key factors that are influencing salaries in data science related jobs using real world data. Through extensive data processing, model selection and log transformation, we were able to develop a model that improves the normality and heteroscedasticity in predicting salaries. The analysis focused on multiple predictors, as we found out **experience_level**, **company_size**, **job_title**, **employee_residence** and **work_setting** are the most significant predictors. We also added an interaction term between **experience_level** and **company_size** to see if the company size has a significant effect on the salary based on experience. The relatively high RMSE from our model suggests that other unobserved factors may also play a significant role in predicting salaries. Given the limitations, such as self-reported survey and locations, they suggest further research on additional predictors that potentially have a significant impact on salaries. Overall, our model provides close insights into the salary trend in data science related job market that may help people searching for appropriate positions and making career decisions, and future exploration on location and cost of living may identify more complex relationships that will improve model accuracy. 
-=======
+
 In this study, we explored some key factors that influence salaries in data science related jobs using real world data. Through extensive data processing, model selection and log transformation, we were able to develop a model that improves the normality and heteroscedasticity in predicting salaries. The analysis focused on multiple predictors, as we found out **experience_level**, **company_size**, **job_title**, **employee_residence** and **work_setting** are the most significant in predicting **salary**. We also added an interaction term between **experience_level** and **company_size** to see if the impact company size has on  salary varies significantly based on experience. The relatively high RMSE from our model suggests that other unobserved factors may also play a significant role in predicting salaries. Given the limitations, such as self-reported survey and locations, they suggest further research on additional predictors that may potentially have a significant impact on salaries. Overall, our model provides close insights into the salary trend in data science related job market that may help people searching for appropriate positions and making career decisions, and future exploration on location and cost of living may identify more complex relationships that will improve model accuracy. 
-
-
-# Appendix
-
-Data Manipulation Process:
-
-```{r ref.label="data-manipulation", eval=FALSE}
-```
-
-Normality check in section 2
-
-```{r ref.label="normality-check-1", eval=FALSE}
-
-```
-
-Checking if interactions are necessary
-
-```{r ref.label="interaction-check-1", eval=FALSE}
-
-```
-
-VIF check
-
-```{r ref.label="vif-check", eval=FALSE}
-
-```
-
-Correlation Matrix:
-
-```{r ref.label="correlation-vif", eval=FALSE}
-
-```
->>>>>>> 7cc53d342aa9e49d33a9a9dce7f65876c1938f2e
