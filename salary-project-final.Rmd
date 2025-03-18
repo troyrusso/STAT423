@@ -379,13 +379,7 @@ After comparing multiple candidate models, our final chosen model regresses **lo
 We transformed the salary to \(\log(\text{salary\_usd})\) to address heteroscedasticity and non‐normal residuals discovered in the initial model. Interpreting coefficients on the log‐scale means that each unit increase in a predictor corresponds to a *multiplicative* change in salary, rather than an additive one. For example:
 - If \(\beta_1 = 0.10\) for a given predictor \(X\), then a **1‐unit** increase in \(X\) is associated with about a **10.5%** increase in salary \(\bigl(e^{0.10} - 1 \approx 0.105\bigr)\).
 
-### 2. **Baseline Levels and Interpretation**
-Many of our predictors are categorical. By default, R sets the first factor level of each predictor as the “baseline,” and the model estimates how other levels differ **relative** to that baseline. Specifically:
-- **experience_level**: “Entry‐level” is our baseline. Coefficients for “Mid‐level,” “Senior,” and “Executive” show how salaries differ (in log‐units) from entry‐level roles.
-- **company_size**: “S” (small) is our baseline. Coefficients for “M” and “L” measure how medium or large companies differ from small ones in terms of salary.
-- **job_title, work_setting, employee_residence**: Similar logic applies—each coefficient is relative to its baseline category.
-
-### 3. **Significant Predictors**
+### 2. **Significant Predictors**
 Based on the final model summary (not shown here in detail), we typically see the following patterns:
 - **experience_level**: Highly significant, with more senior roles (e.g., “Senior,” “Executive”) associated with higher \(\log(\text{salary})\). This implies strong upward salary trends as experience grows.
 - **company_size**: Medium or large companies might pay more, on average, than small companies—but the magnitude and significance can vary by the data.
@@ -393,30 +387,9 @@ Based on the final model summary (not shown here in detail), we typically see th
 - **employee_residence**: Countries or regions with different cost‐of‐living indices can have substantially different salary norms.
 - **work_setting**: If “Remote” vs. “In‐Office” or other setups are included, each may show a different average salary level.
 
-### 4. **Interaction: `experience_level : company_size`**
+### 3. **Interaction: `experience_level : company_size`**
 We included an interaction between **experience_level** and **company_size** to test whether the *effect* of experience on salary depends on the size of the company. Interpreting an interaction on the log‐scale:
 - The coefficient of `(Senior : Large)` tells us the additional log‐salary *beyond* simply adding the main effects of “Senior” and “Large” separately.  
-- If this interaction is positive and significant, it indicates that seniority in larger companies *amplifies* the salary effect compared to small companies.
-
-### 5. **Goodness‐of‐Fit**
-- **\(R^2\) on the log scale**: While a higher \(R^2\) indicates better explanatory power, we are primarily interested in whether major assumptions (linearity, normality of residuals) are met.
-- **RMSE or MSE** on the **log scale**: Tells us how far predictions deviate from actual \(\log(\text{salary})\). In exponentiated form, it helps gauge the typical percentage error in predictions.
-
-### 6. **Exponentiating Predictions to Get Actual Salary**
-Since the model predicts \(\log(\text{salary})\):
-\[
-\hat{y}_{\text{log}} = \beta_0 \;+\;\beta_1 x_1 \;+\;\dots
-\]
-To get back to the **predicted salary**, compute:
-\[
-\hat{\text{salary}} = e^{\hat{y}_{\text{log}}}
-\]
-Any confidence or prediction intervals on the log scale can similarly be exponentiated to get intervals in dollar terms.
-
-
-
-
-
 
 # 3 Testing and Results
 
@@ -440,17 +413,31 @@ test_predictions_salary <- exp(test_predictions_log)
 #    (d) MSE on the *original* salary scale
 test_mse_salary <- mean((test_set$salary_in_usd - test_predictions_salary)^2)
 test_rmse_salary <- sqrt(test_mse_salary)
-
-# 4. Print out the results
-cat("Test Set Results (Log-Scale):\n")
-cat(" - MSE (log-scale):", round(test_mse_log, 4), "\n")
-cat(" - RMSE (log-scale):", round(test_rmse_log, 4), "\n\n")
-
-cat("Test Set Results (Original Salary Scale):\n")
-cat(" - MSE (USD):", round(test_mse_salary, 2), "\n")
-cat(" - RMSE (USD):", round(test_rmse_salary, 2), "\n")
-
 ```
+\begin{table}[h]
+    \centering
+    \begin{tabular}{|l|c|}
+        \hline
+        \textbf{Metric} & \textbf{Value} \\
+        \hline
+        \multicolumn{2}{|c|}{\textbf{Log-Scale Results}} \\
+        \hline
+        MSE (log-scale) & 0.1589 \\
+        RMSE (log-scale) & 0.3987 \\
+        \hline
+        \multicolumn{2}{|c|}{\textbf{Original Salary Scale}} \\
+        \hline
+        MSE (USD) & 3,571,383,112 \\
+        RMSE (USD) & 59,761.05 \\
+        \hline
+    \end{tabular}
+    \caption{Test Set Performance Metrics}
+    \label{tab:test_results}
+\end{table}
+
+Our final model exhibits an RMSE of approximately 0.4 in log-scale, which translates to substantial error when converted back to the original salary scale. Specifically, the RMSE in USD is $59,761.05, which is about 0.4 times the median salary in our dataset. While this indicates that our model captures general salary trends, the remaining variability suggests inherent limitations in the available data, such as unobserved factors influencing salary that our model cannot account for.
+
+
 
 
 ```{r test-set-plot, echo=FALSE, fig.width=4, fig.height=3, fig.align= 'center'}
@@ -468,7 +455,7 @@ ggplot(results_df, aes(x = actual_salary, y = predicted_salary)) +
   theme_minimal()
 ```
 
-
+The graph of our predicted salary vs actual salary shows that our model does capture much of the relationship, but there is still a lot of variation that our model is unable to capture still.
 # 4. Discussion
 
 ## 4.1 Limitations
