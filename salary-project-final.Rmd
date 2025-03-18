@@ -161,7 +161,6 @@ ggplot(mean_salary, aes(x = experience_level, y = mean_salary, color = company_s
 ```
 
 ```{r include=FALSE}
-install.packages("dplyr")
 library(dplyr)
 model_df <- joined_df %>% 
   select(!c(employment_type, work_setting, job_title, Cost.of.Living.Plus.Rent.Index, Local.Purchasing.Power.Index, Groceries.Index, Restaurant.Price.Index))
@@ -227,9 +226,9 @@ fit <- regsubsets(log(salary_in_usd) ~ experience_numeric + us_resident + log(ex
 
 summary_fit <- summary(fit)
 
-which.min(summary(fit)$bic)
-which.min(summary(fit)$cp)
-which.max(summary(fit)$adjr2)
+ #which.min(summary(fit)$bic)
+ #which.min(summary(fit)$cp)
+ #which.max(summary(fit)$adjr2)
 ```
 
 ```{r echo=FALSE}
@@ -238,7 +237,7 @@ rss <- summary_fit$rss
 k <- apply(summary_fit$which, 1, sum) 
 
 aic_values <- n * log(rss / n) + 2 * k
-which.min(aic_values)
+#which.min(aic_values)
 ```
 
 The AIC, BIC, CP, and Adjusted $R^2$, all tells me that `experience numeric`, `us_resident`, `Rank`, `company_size`, and `job_category` 
