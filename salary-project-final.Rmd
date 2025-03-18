@@ -348,7 +348,7 @@ barplot(cooks_values,
         main = "Cook's Distance",
         ylab = "Cook's Distance",
         xlab = "Observation Index")
-abline(h = 4/7500,
+abline(h = 4/7575,
        col = "red",
        lty = 2)
 plot(step_log_model, which = 5)
@@ -402,7 +402,7 @@ We included an interaction between **experience_level** and **company_size** to 
 
 ```{r test-set-results, echo=FALSE}
 # 1. Fit the final model on the "candidate_set"
-final_model <- step_log_model_interact
+final_model <- update(step_log_model_interact,.~.-Rank)
 
 # 2. Generate predictions on the test set
 test_predictions_log <- predict(final_model, newdata = test_set)
