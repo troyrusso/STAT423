@@ -1,0 +1,31 @@
+
+$%# Appendix$
+
+$%Data Manipulation Process:$
+
+```{r ref.label="data-manipulation", eval=FALSE, echo = FALSE}
+```
+
+$%Normality check in section 2$
+
+```{r ref.label="normality-check-1", eval=FALSE, echo = FALSE}
+
+```
+
+$%Checking if interactions are necessary$
+
+```{r ref.label="interaction-check-1", eval=FALSE, echo = FALSE}
+
+```
+
+$%VIF check$
+
+```{r ref.label="vif-check", eval=FALSE, echo = FALSE}
+
+```
+
+$%Correlation Matrix:$
+
+```{r ref.label="correlation-vif", eval=FALSE, echo = FALSE}
+
+```

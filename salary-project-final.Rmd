@@ -264,6 +264,7 @@ bp_test <- bptest(step_model)
 
 # Using the caret package for 10-fold cross-validation
 library(caret)
+library(knitr)
 set.seed(123)  # for reproducibility
 
 # Define training control for 10-fold cross-validation
@@ -276,7 +277,8 @@ cv_model <- train(salary_in_usd ~ experience_level + job_title + employee_reside
                   data = joined_df, 
                   method = "lm", 
                   trControl = train_control)
-print(cv_model)
+cv_results <- cv_model$results[, c("RMSE", "Rsquared", "MAE")]
+kable(cv_results, caption = "10-fold Cross-Validation Results")
 
 
 # 3. anova
@@ -286,7 +288,7 @@ The cross validation tells us that our model is not over fitting since the $R^2$
 
 The residual plot shows a funnel shape, which suggests hetereoscadascity of the variance and the residuals do not appear to be centered at zero, which indicates that there is bias. The plots indicate that we may want to use the log of the salary instead of salary as our response.
 
-we can now run the step AIC function again using the log(salary) as our response and perform the same model diagnostic tests as above. We also add an interaction term between experience_level and company size.
+We can now run the step AIC function again using the log(salary) as our response and perform the same model diagnostic tests as above. We also add an interaction term between experience_level and company size.
 
 ```{r, echo = FALSE, fig.width=5, fig.height=3, fig.align= 'center'}
 model_df$log_salary <- log(model_df$salary_in_usd)
@@ -302,6 +304,7 @@ step_log_model_interact <- stepAIC(model_with_interaction,
 
 # 3. Review the summary of the new model
 model_summary <- summary(step_log_model_interact)
+
 
 # Print only the Call (Formula)
 cat("Call:\n")
@@ -322,7 +325,7 @@ bp_test <- bptest(step_log_model_interact)  # p-value < 0.05 indicates potential
 
 anova_result <- anova(step_log_model_interact)
 ```
-Our log transformed model has a much higher $R^2$ indicating that our model explains a lot more of the variability in log(salary) than it does salary. Although our residual plot still heteroscedasity, so we need to consider what other transformations we can make.
+Our **log-transformed model** achieves a notably higher $R^2$, indicating it explains more variability in \(\log(\text{salary})\) than the untransformed model. However, the residual plot still exhibits heteroscedasticity, suggesting that further transformations or alternative modeling approaches may be necessary.
 
 ```{r, echo = FALSE, fig.width=4, fig.height=2.5, fig.align= 'center'}
 bc <- boxcox(lm(salary_in_usd ~ -salary_in_usd, data = model_df), plotit = TRUE)
@@ -364,18 +367,18 @@ Upon further analysis, it appears that the `Rank` predictor significantly increa
 ## 2.5 Final Model Description
 
 After comparing multiple candidate models, our final chosen model regresses **log(salary_in_usd)** on several predictors:
-
-\[
-\log(\text{salary\_in\_usd}) =
+  
+\begin{align}
+\log(\text{salary\_in\_usd}) &= 
 \beta_0 
-+ \beta_1 \cdot \text{experience\_level} 
-+ \beta_2 \cdot \text{job\_title} 
-+ \beta_3 \cdot \text{employee\_residence}
-+ \beta_4 \cdot \text{work\_setting}
-+ \beta_5 \cdot \text{company\_size}
-+ \beta_6 \cdot (\text{experience\_level} \times \text{company\_size})
-+ \cdots
-\]
++ \beta_1 \cdot \text{experience\_level} \notag \\
+&\quad + \beta_2 \cdot \text{job\_title} 
++ \beta_3 \cdot \text{employee\_residence} \notag \\
+&\quad + \beta_4 \cdot \text{work\_setting} 
++ \beta_5 \cdot \text{company\_size} \notag \\
+&\quad + \beta_6 \cdot (\text{experience\_level} \times \text{company\_size}) + \cdots
+\end{align}
+
 
 
 ### 1. **Log Transformation**
@@ -419,24 +422,19 @@ test_rmse_salary <- sqrt(test_mse_salary)
 ```
 \begin{table}[h]
     \centering
+    \caption{Root Mean Squared Error (RMSE) Results}
+    \label{tab:test_results}
     \begin{tabular}{|l|c|}
         \hline
         \textbf{Metric} & \textbf{Value} \\
         \hline
-        \multicolumn{2}{|c|}{\textbf{Log-Scale Results}} \\
+        Log-Scale RMSE & 0.1589 \\
         \hline
-        MSE (log-scale) & 0.1589 \\
-        RMSE (log-scale) & 0.3987 \\
-        \hline
-        \multicolumn{2}{|c|}{\textbf{Original Salary Scale}} \\
-        \hline
-        MSE (USD) & 3,571,383,112 \\
-        RMSE (USD) & 59,761.05 \\
+        Original Salary RMSE & 59,761.05 \\
         \hline
     \end{tabular}
-    \caption{Test Set Performance Metrics}
-    \label{tab:test_results}
 \end{table}
+
 
 Our final model exhibits an RMSE of approximately 0.4 in log-scale, which translates to substantial error when converted back to the original salary scale. Specifically, the RMSE in USD is $59,761.05, which is about 0.4 times the median salary in our dataset. While this indicates that our model captures general salary trends, the remaining variability suggests inherent limitations in the available data, such as unobserved factors influencing salary that our model cannot account for.
 
@@ -458,7 +456,8 @@ ggplot(results_df, aes(x = actual_salary, y = predicted_salary)) +
   theme_minimal()
 ```
 
-The graph of our predicted salary vs actual salary shows that our model does capture much of the relationship, but there is still a lot of variation that our model is unable to capture still.
+The scatter plot of predicted salaries (y-axis) versus actual salaries (x-axis) shows that while our model captures the overall upward trend (points cluster around the diagonal), there is still considerable spread—particularly at higher salary levels. This indicates that although many predictions are reasonable, significant variability remains, suggesting unmodeled factors or inherent randomness in the data.
+  
 # 4. Discussion
 
 ## 4.1 Limitations
@@ -467,35 +466,3 @@ The primary limitation to our study is that our data comes from self-reported su
 
 ## 4.2 Conclusion
 In this study, we explored some key factors that are influencing salaries in data science related jobs using real world data. Through extensive data processing, model selection and log transformation, we were able to develop a model that improves the normality and heteroscedasticity in predicting salaries. The analysis focused on multiple predictors, as we found out **experience_level**, **company_size**, **job_title**, **employee_residence** and **work_setting** are the most significant predictors. We also added an interaction term between **experience_level** and **company_size** to see if the company size has a significant effect on the salary based on experience. The relatively high RMSE from our model suggests that other unobserved factors may also play a significant role in predicting salaries. Given the limitations, such as self-reported survey and locations, they suggest further research on additional predictors that potentially have a significant impact on salaries. Overall, our model provides close insights into the salary trend in data science related job market that may help people searching for appropriate positions and making career decisions, and future exploration on location and cost of living may identify more complex relationships that will improve model accuracy. 
-
-
-# Appendix
-
-Data Manipulation Process:
-
-```{r ref.label="data-manipulation", eval=FALSE}
-```
-
-Normality check in section 2
-
-```{r ref.label="normality-check-1", eval=FALSE}
-
-```
-
-Checking if interactions are necessary
-
-```{r ref.label="interaction-check-1", eval=FALSE}
-
-```
-
-VIF check
-
-```{r ref.label="vif-check", eval=FALSE}
-
-```
-
-Correlation Matrix:
-
-```{r ref.label="correlation-vif", eval=FALSE}
-
-```
