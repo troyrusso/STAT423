@@ -335,11 +335,13 @@ The box cox indicates that the log transformed model is the best power model for
 
 We can also test to make sure that there are no high leverage points, that might be skewing the values of the coefficients. To do this, we can calculate the Cook's Distance on this model, and create a plot that visualizes these distances for each point. 
 
-```{r, fig.label = "cooks-distance", echo = FALSE, fig.width=4, fig.height=3, fig.align= 'center'}
+```{r, fig.label = "cooks-distance-and-leverage", echo = FALSE, fig.width=6, fig.height=3, fig.align= 'center'}
+
 cooks_values <- cooks.distance(step_log_model)
 
 threshhold <- 4/length(cooks_values)
 
+par(mfrow=c(1,2))
 barplot(cooks_values,
         main = "Cook's Distance",
         ylab = "Cook's Distance",
@@ -347,9 +349,10 @@ barplot(cooks_values,
 abline(h = 4/7500,
        col = "red",
        lty = 2)
+plot(step_log_model, which = 5)
 ```
 
-Considering we have 7575 observations, a good threshold is that Cook's distance values should be lower than $\frac{4}{7575}\approx 0.00053$. Visibly, we can see that there are definitely some points that exceed this threshold. When pluging this into R, we get that 457 observations have significantly high values. This suggests that a non-trivial section of the data set is having a large impact on the regression model. We can take a quick look at the points associated with these highest values to make sure there is no mismeasurement going on.
+Considering we have 7575 observations, a good threshold is that Cook's distance values should be lower than $\frac{4}{7575}\approx 0.00053$. Visibly, we can see that there are definitely some points that exceed this threshold, especially through the residual vs leverage plot there are some data points that apparently have high leverage. When plugging this into R, we get that 457 observations have significantly high values. This suggests that a non-trivial section of the data set is having a large impact on the regression model. We can take a quick look at the points associated with these highest values to make sure there is no mismeasurement going on.
 
 ```{r, echo = FALSE}
 top_5_cook <- tail(sort(cooks_values),5)
