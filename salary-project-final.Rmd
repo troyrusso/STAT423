@@ -149,7 +149,7 @@ par(mfrow = c(1, 1))
 
 To test the assumptions for our categorical variables we must look at the average salary by category, to see if there is a clear trend between the different experience levels in respective company size. This checks off the linearity assumption because there is a (somewhat) linear increasing trend for all the experience levels. We can see that we don't need an interaction effect between `experience_level` and `company_size` because the trend is increasing for each company size at around the same rate. We can test this using an ANOVA test at $\alpha = 0.05$ to see if adding an interaction term effects the model.
 
-```{r message=FALSE, echo=FALSE, fig.width=5, fig.height=3, fig.align='center', fig.cap='Interaction between Experience Level and Company Size on Salary', label="interaction-check-1"}
+```{r message=FALSE, echo=FALSE, fig.width=4, fig.height=3, fig.align='center', fig.cap='Interaction between Experience Level and Company Size on Salary', label="interaction-check-1"}
 mean_salary <- joined_df %>%
   group_by(experience_level, company_size) %>%
   summarize(mean_salary = mean(salary_in_usd))
@@ -183,7 +183,7 @@ With the exception of `company_location`, all of these predictors have a VIF val
 
 We are joining the cost of living dataset, which includes a number of variables that are related to cost of living metrics. We suspect that they might correlate together, being measures of the same changes in price and economy, so we can create a correlation matrix to examine any multicollinearity that may exist:
 
-```{r label="correlation-vif", echo=FALSE, warning=FALSE, message=FALSE}
+```{r label="correlation-vif", echo=FALSE, warning=FALSE, message=FALSE, fig.align= 'center'}
 
 # 1. Correlation Matrix ---------------------------------------------
 # Select numeric columns only (excluding the response itself if needed)
@@ -211,7 +211,7 @@ model_df <- joined_df %>%
 
 From our data processing and model diagnostics step, to avoid repeating variables, satisfy the assumptions necessary for conducting a linear model, and to consolidate the number of predictors we are using. Variables like `employement_type` and `job_title` are removed because they are highly correlated with new variables we mutated or existing variables. We are also removing `company_location` and `employee_residence` to simplify our model since there are a lot of different categories and most of them aren't significant to model at $\alpha = 0.05$, consolidating our model down. We'll be using a dataframe with the following variables: `r names(model_df)`.
 
-```{r}
+```{r, echo = FALSE}
 set.seed(123)  # Ensure reproducibility
 
 # Calculate the total number of rows in model_df
@@ -235,37 +235,16 @@ The AIC, BIC, CP, and Adjusted $R^2$, all tells me that `experience numeric`, `u
 
 
 We can use a step function from the MASS package that computes the best model purely based on the AIC by comparing every potential model combination and returning the model with the lowest AIC. This model may be overfit however, since AIC does not account for model complexity.
-```{r, echo = F}
-
+```{r, echo = T}
 # Fit the full model with all predictors
 full_model <- lm(salary_in_usd ~ . - salary_in_usd, data = model_df)
-
 # Perform stepwise selection using AIC (both directions)
 step_model <- stepAIC(full_model, direction = "both", trace = FALSE)
-
-# Display the summary of the selected model
-
-model_summary <- summary(step_model)
-
-# Print only the Call (Formula)
-cat("Call:\n")
-print(model_summary$call)
-cat("\n")
-
-# Print Residuals summary
-cat("Residuals:\n")
-print(model_summary$residuals %>% summary())
-cat("\n")
-
-# Print only Model Fit Statistics
-cat("Residual standard error:", model_summary$sigma, "on", model_summary$df[2], "degrees of freedom\n")
-cat("Multiple R-squared:", model_summary$r.squared, "\n")
-cat("Adjusted R-squared:", model_summary$adj.r.squared, "\n")
-cat("F-statistic:", model_summary$fstatistic[1], "on", model_summary$fstatistic[2], "and", model_summary$fstatistic[3], "DF, p-value:", pf(model_summary$fstatistic[1], model_summary$fstatistic[2], model_summary$fstatistic[3], lower.tail = FALSE), "\n")
 ```
 Now that we have the model that we have found from AIC we can test the assumptions of the model as well as performing cross validation to test the valididity of the model. We can also perform an anova test to see if our predictors are significant.
-```{r}
+```{r, echo = FALSE, fig.width=5, fig.height=3, fig.align= 'center'}
 # Residuals vs Fitted
+par(mfrow = c(1, 2))
 plot(step_model$fitted.values, step_model$residuals,
      main = "Residuals vs Fitted",
      xlab = "Fitted Values", ylab = "Residuals")
@@ -274,11 +253,12 @@ abline(h = 0, col = "red")
 # Q-Q Plot for Normality of Residuals
 qqnorm(step_model$residuals, main = "Q-Q Plot")
 qqline(step_model$residuals, col = "red")
-
+par(mfrow = c(1, 2))
+par(mfrow = c(1, 1))  
 # Testing for heteroscedasticity using the Breusch-Pagan test
 library(lmtest)
 bp_test <- bptest(step_model)
-print(bp_test)  # p-value < 0.05 indicates potential heteroscedasticity
+ # p-value < 0.05 indicates potential heteroscedasticity
 
 # 2. Model Validation: Cross-Validation -----------------------------
 
@@ -301,7 +281,6 @@ print(cv_model)
 
 # 3. anova
 anova_result <- anova(step_model)
-print(anova_result)
 ```
 The cross validation tells us that our model is not over fitting since the $R^2$ is only about 35%, but also suggests that we can improve our model because the RMSE is quite high at 54993, so we may need to add more interactions or do some non linear transformations of the data.
 
@@ -309,19 +288,17 @@ The residual plot shows a funnel shape, which suggests hetereoscadascity of the 
 
 we can now run the step AIC function again using the log(salary) as our response and perform the same model diagnostic tests as above. We also add an interaction term between experience_level and company size.
 
-```{r}
+```{r, echo = FALSE, fig.width=5, fig.height=3, fig.align= 'center'}
 model_df$log_salary <- log(model_df$salary_in_usd)
 log_full_model <- lm(log_salary ~ .- salary_in_usd -log_salary, data = model_df)
 step_log_model <- stepAIC(log_full_model, direction = "both", trace = FALSE)
-summary(step_log_model)
-
 model_with_interaction <- update(step_log_model, 
                                  . ~ . + experience_level:company_size)
 
 # 2. Perform stepwise selection again starting from the updated model
 step_log_model_interact <- stepAIC(model_with_interaction, 
-                                   direction = "both", 
-                                   trace = FALSE)
+                                  direction = "both", 
+                                 trace = FALSE)
 
 # 3. Review the summary of the new model
 model_summary <- summary(step_log_model_interact)
@@ -331,18 +308,8 @@ cat("Call:\n")
 print(model_summary$call)
 cat("\n")
 
-# Print Residuals summary
-cat("Residuals:\n")
-print(model_summary$residuals %>% summary())
-cat("\n")
-
-# Print only Model Fit Statistics
-cat("Residual standard error:", model_summary$sigma, "on", model_summary$df[2], "degrees of freedom\n")
 cat("Multiple R-squared:", model_summary$r.squared, "\n")
-cat("Adjusted R-squared:", model_summary$adj.r.squared, "\n")
-cat("F-statistic:", model_summary$fstatistic[1], "on", model_summary$fstatistic[2], "and", model_summary$fstatistic[3], "DF, p-value:", pf(model_summary$fstatistic[1], model_summary$fstatistic[2], model_summary$fstatistic[3], lower.tail = FALSE), "\n")
-
-
+par(mfrow = c(1, 2))
 plot(step_log_model_interact$fitted.values, step_log_model_interact$residuals,
      main = "Residuals vs Fitted",
      xlab = "Fitted Values", ylab = "Residuals")
@@ -350,16 +317,14 @@ abline(h = 0, col = "red")
 
 qqnorm(step_log_model_interact$residuals, main = "Q-Q Plot")
 qqline(step_log_model_interact$residuals, col = "red")
-
-bp_test <- bptest(step_log_model_interact)
-print(bp_test)  # p-value < 0.05 indicates potential heteroscedasticity
+par(mfrow = c(1, 1))  
+bp_test <- bptest(step_log_model_interact)  # p-value < 0.05 indicates potential heteroscedasticity
 
 anova_result <- anova(step_log_model_interact)
-print(anova_result)
 ```
 Our log transformed model has a much higher $R^2$ indicating that our model explains a lot more of the variability in log(salary) than it does salary. Although our residual plot still heteroscedasity, so we need to consider what other transformations we can make.
 
-```{r}
+```{r, echo = FALSE, fig.width=4, fig.height=2.5, fig.align= 'center'}
 bc <- boxcox(lm(salary_in_usd ~ -salary_in_usd, data = model_df), plotit = TRUE)
 # Choose lambda based on the plot and refit using transformed response:
 lambda_opt <- bc$x[which.max(bc$y)]
@@ -370,7 +335,7 @@ The box cox indicates that the log transformed model is the best power model for
 
 We can also test to make sure that there are no high leverage points, that might be skewing the values of the coefficients. To do this, we can calculate the Cook's Distance on this model, and create a plot that visualizes these distances for each point. 
 
-```{r, fig.label = "cooks-distance"}
+```{r, fig.label = "cooks-distance", echo = FALSE, fig.width=4, fig.height=3, fig.align= 'center'}
 cooks_values <- cooks.distance(step_log_model)
 
 threshhold <- 4/length(cooks_values)
@@ -386,7 +351,7 @@ abline(h = 4/7500,
 
 Considering we have 7575 observations, a good threshold is that Cook's distance values should be lower than $\frac{4}{7575}\approx 0.00053$. Visibly, we can see that there are definitely some points that exceed this threshold. When pluging this into R, we get that 457 observations have significantly high values. This suggests that a non-trivial section of the data set is having a large impact on the regression model. We can take a quick look at the points associated with these highest values to make sure there is no mismeasurement going on.
 
-```{r}
+```{r, echo = FALSE}
 top_5_cook <- tail(sort(cooks_values),5)
 #We get the numbers 
 model_df[c(6845,7357,6052,6800,6030),c(2,5,6,7,8)]
@@ -488,7 +453,7 @@ cat(" - RMSE (USD):", round(test_rmse_salary, 2), "\n")
 ```
 
 
-```{r test-set-plot, echo=FALSE, fig.width=5, fig.height=4}
+```{r test-set-plot, echo=FALSE, fig.width=4, fig.height=3, fig.align= 'center'}
 results_df <- data.frame(
   actual_salary = test_set$salary_in_usd,
   predicted_salary = test_predictions_salary
