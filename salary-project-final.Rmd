@@ -167,7 +167,7 @@ library(dplyr)
 model_df <- joined_df %>% 
   dplyr::select(!c(employment_type, work_setting, job_title, Cost.of.Living.Plus.Rent.Index, Local.Purchasing.Power.Index, Groceries.Index, Restaurant.Price.Index))
 ```
-**Correlation and Multicollinearity Analysis**
+**Correlation and Multicollinearity Analysis (Isaac)**
 
 One of the assumptions we are making in our model is that the predictors we are using are independent. Thus, it becomes expedient to test the multicollinearity of our predictors, to ensure that they are each independent of one another and add new information. Because a large majority of our predictors are categorical, we can use The VIF (Variance Inflation Factor) to test the multicollinearity of those:
 
@@ -334,6 +334,7 @@ model_df$trans_salary <- if(lambda_opt == 0) log(model_df$salary_in_usd) else (m
 ```
 The box cox indicates that the log transformed model is the best power model for our data, so the changes we need to make will be on individual predictors and not the entire data.
 
+**Model Selection Variation (Isaac)**
 One way to verify that this model is the optimal choice of predictors it to explore which predictors would be selected by the BIC and Cp criteria, and analyze any differences that exist.
 ```{r, echo=F, message=F, results='hide', fig.height=3,fig.width=4}
 subsets <- regsubsets(data = model_df,
@@ -384,6 +385,7 @@ ggplot(data = df_model_selection,
 ```
 The BIC criterion minimizes at 15 predictors, while the Cp and AIC criteria minimize at 16 predictors. We expect the BIC to minimize at a lower amount of predictors than the rest, but the fact that it is so close, alongside the fact that the Cp criteria minimizes at the same point as our AIC model, is a good indication that our model is optimal. 
 
+**Cook's Distance Analysis (Isaac)**
 We can also test to make sure that there are no high leverage points, that might be skewing the values of the coefficients. To do this, we can calculate the Cook's Distance on this model, and create a plot that visualizes these distances for each point. 
 
 ```{r, fig.label = "cooks-distance-and-leverage", echo = FALSE, fig.width=6, fig.height=3, fig.align= 'center'}
