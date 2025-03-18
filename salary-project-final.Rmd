@@ -359,7 +359,7 @@ top_5_cook <- tail(sort(cooks_values),5)
 #We get the numbers 
 model_df[c(6845,7357,6052,6800,6030),c(2,5,6,7,8)]
 ```
-Notably, none of these data points are residents of the United States. It seems that instead, they are from countries with either really high or really low cost of living indexes. Their salaries, experience, job categories, and size of their companies do not seem to be the criteria that inflates the Cook's distance values.
+Upon further analysis, it appears that the `Rank` predictor significantly increases the Cook's distance of high-leverage points. Removing this predictor from our model, we decrease the Cook's distances across the board, resulting in 84 fewer high-leverage points. We are working with a very large data set, so the fact that we still have some high-leverage points, while not ideal, isn't too concerning.
 
 ## 2.5 Final Model Description
 
